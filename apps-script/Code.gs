@@ -59,6 +59,8 @@ function setup() {
 }
 
 function doGet() {
+  const ss = SpreadsheetApp.getActive();
+  if (ss && (!ss.getSheetByName('Codes') || !ss.getSheetByName('Impact') || !ss.getSheetByName('Response'))) setup();
   return json({ ok: true, service: 'El Nino Flood Reporting API' });
 }
 
