@@ -37,6 +37,7 @@ const COLL = {
 /** Run once from the editor: creates the three tabs with headers. */
 function setup() {
   const ss = SpreadsheetApp.getActive();
+  if (!ss) throw new Error('This script is not attached to a Google Sheet. Open your Sheet, go to Extensions > Apps Script, and paste the code there.');
   const codes = ss.getSheetByName('Codes') || ss.insertSheet('Codes');
   if (codes.getLastRow() === 0) {
     codes.getRange(1, 1, 1, 4).setValues([['Code', 'Type (IM, RM or ALL)', 'Districts (Kobo codes, comma separated)', 'District names (for reference)']]);
@@ -52,6 +53,9 @@ function setup() {
       if (!NUMERIC.has(f)) sh.getRange(1, i + 1, sh.getMaxRows(), 1).setNumberFormat('@');
     });
   });
+  SpreadsheetApp.flush();
+  Logger.log('Tabs ready in "' + ss.getName() + '": ' + ss.getSheets().map(function (s) { return s.getName(); }).join(', '));
+  Logger.log('Open it here: ' + ss.getUrl());
 }
 
 function doGet() {
