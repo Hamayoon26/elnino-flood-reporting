@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>El Niño Flood Reporting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field-office console. Thin top bar, one working surface per screen, wide tables scroll in their own frame. */
+:root{
+  --bg:#eef2f3; --surface:#ffffff; --sunk:#e3e9eb; --line:#cfd8dc; --ink:#13232d; --muted:#566974;
+  --flood:#0d5c80; --flood-soft:#d7e8f0; --silt:#a5621f; --silt-soft:#f3e5d4;
+  --ok:#2c7a4b; --bad:#b3362c; --bad-soft:#f6dedb;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1a20; --surface:#16252d; --sunk:#1d2f38; --line:#2c434e; --ink:#e3ecef; --muted:#93a8b2;
+  --flood:#5fb3d9; --flood-soft:#173a4b; --silt:#e0a062; --silt-soft:#3d2c1b;
+  --ok:#6cc290; --bad:#ef8a80; --bad-soft:#47221f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1a20; --surface:#16252d; --sunk:#1d2f38; --line:#2c434e; --ink:#e3ecef; --muted:#93a8b2;
+  --flood:#5fb3d9; --flood-soft:#173a4b; --silt:#e0a062; --silt-soft:#3d2c1b;
+  --ok:#6cc290; --bad:#ef8a80; --bad-soft:#47221f; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);margin:0}
+h1,h2,h3{font-family:var(--display);font-stretch:85%;line-height:1.15;text-wrap:balance;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--flood);outline-offset:2px}
+.wrap{padding-inline:16px;padding-block:20px 48px;max-width:1500px;margin:0 auto}
+.narrow{max-width:860px}
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar .in{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding-inline:16px;padding-block:10px;max-width:1500px;margin:0 auto}
+.brand{font-family:var(--display);font-weight:700;font-stretch:80%;font-size:18px;letter-spacing:.01em;display:flex;gap:10px;align-items:center}
+.brand .mark{width:22px;height:22px;flex:none}
+.who{font-size:13px;color:var(--muted);flex:1;min-width:0}
+.who b{color:var(--ink);font-family:var(--mono);font-weight:500}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:7px 14px;cursor:pointer;font-weight:500;font-size:14px}
+.btn:hover{border-color:var(--flood)}
+.btn.primary{background:var(--flood);border-color:var(--flood);color:var(--surface)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+/* PIN */
+.pin{min-height:78vh;display:grid;place-items:center;padding-inline:16px}
+.pin-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px 24px;display:grid;gap:16px}
+.pin-card h1{font-size:28px}
+.pin-card p{margin:0;color:var(--muted)}
+.pin-input{font-family:var(--mono);font-size:26px;letter-spacing:.18em;text-align:center;text-transform:uppercase;padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);width:100%}
+.msg{font-size:14px;padding:8px 12px;border-radius:var(--r)}
+.msg.bad{background:var(--bad-soft);color:var(--bad)}
+.msg.ok{background:var(--flood-soft);color:var(--ink)}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+/* home */
+.home-head{display:grid;gap:6px;margin-bottom:20px}
+.home-head h1{font-size:clamp(26px,4vw,36px)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{font-size:12px;padding:2px 9px;border-radius:999px;background:var(--sunk);border:1px solid var(--line)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.tile{display:grid;gap:8px;text-align:left;padding:20px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-height:150px;align-content:start;position:relative}
+.tile .n{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.tile h2{font-size:24px}
+.tile p{margin:0;color:var(--muted);font-size:14px}
+.tile.impact{border-top:4px solid var(--silt)}
+.tile.response{border-top:4px solid var(--flood)}
+.tile:not([disabled]):hover{box-shadow:0 2px 0 var(--line);transform:translateY(-1px)}
+.tile[disabled]{cursor:not-allowed;background:var(--sunk);border-top-color:var(--line)}
+.tile[disabled] h2,.tile[disabled] p{color:var(--muted)}
+.tile .state{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.tile:not([disabled]) .state{color:var(--ok)}
+.tile[disabled] .state{color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin-top:18px;max-width:75ch}
+/* forms */
+.page-head{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:end;justify-content:space-between;margin-bottom:18px}
+.page-head h1{font-size:clamp(24px,3.4vw,32px)}
+.page-head .sub{color:var(--muted);font-size:14px;margin-top:4px;max-width:80ch}
+fieldset{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:18px;margin:0 0 16px;display:grid;gap:16px;min-width:0}
+legend{font-family:var(--display);font-weight:700;font-stretch:85%;font-size:18px;padding:0 6px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px 18px}
+.f{display:grid;gap:5px;min-width:0}
+.f>label,.f>.lab{font-weight:500;font-size:14px}
+.f .hint{font-size:12px;color:var(--muted)}
+.req::after{content:" *";color:var(--bad)}
+input[type=text],input[type=number],input[type=date],select,textarea{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;background:var(--bg);width:100%;min-width:0}
+textarea{min-height:76px;resize:vertical}
+input[type=number]{font-family:var(--mono);text-align:right}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--bg);cursor:pointer;font-size:14px}
+.opt:has(input:checked){background:var(--flood-soft);border-color:var(--flood)}
+.opt input{margin:0;accent-color:var(--flood)}
+.invalid{border-color:var(--bad)!important;background:var(--bad-soft)!important}
+.scope{background:var(--silt-soft);border-radius:var(--r);padding:10px 14px;font-size:14px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+/* tables */
+.tbl-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);max-height:72vh}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+thead th{position:sticky;top:0;background:var(--sunk);z-index:2;font-weight:600;font-size:12px;line-height:1.25;vertical-align:bottom}
+thead tr.grp th{top:0;font-family:var(--display);font-stretch:85%;font-size:13px;text-transform:uppercase;letter-spacing:.04em;border-bottom:none;text-align:center;border-left:1px solid var(--line)}
+thead tr.grp+tr th{top:31px}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--sunk) 45%,var(--surface))}
+tbody tr:hover td{background:var(--flood-soft)}
+tfoot td{position:sticky;bottom:0;background:var(--sunk);font-weight:600;border-top:2px solid var(--ink)}
+.stick{position:sticky;left:0;z-index:1;background:var(--surface)}
+thead th.stick{z-index:3;background:var(--sunk)}
+tbody tr:nth-child(even) td.stick{background:color-mix(in srgb,var(--sunk) 45%,var(--surface))}
+.zero{color:var(--muted)}
+.orgs{min-width:120px;font-size:12px}
+/* entry grid */
+.entry td{padding:4px 5px}
+.entry input[type=number]{width:84px;padding:5px 6px}
+.entry input[type=date]{width:136px;padding:5px 6px}
+.entry select{width:150px;padding:5px 6px}
+.entry input[type=text]{width:160px;padding:5px 6px}
+.entry .loc{min-width:180px;max-width:220px}
+.entry .loc b{display:block;font-size:13px}
+.entry .loc small{color:var(--muted)}
+.entry tr.dirty td.stick{box-shadow:inset 4px 0 0 var(--flood)}
+.entry tr.saved td.stick{box-shadow:inset 4px 0 0 var(--ok)}
+.entry tr.err td.stick{box-shadow:inset 4px 0 0 var(--bad)}
+.pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:999px;background:var(--sunk);color:var(--muted);margin-top:3px}
+.pill.new{background:var(--flood-soft);color:var(--flood)}
+/* dashboard */
+.dash-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start;margin-bottom:14px}
+.dash-head h1{font-size:clamp(24px,3.2vw,34px)}
+.draft{color:var(--bad);font-weight:700}
+.disclaimer{font-size:12.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px}
+.disclaimer b{color:var(--ink)}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
+.toolbar .f{width:min(100%,240px)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;padding:8px 14px;cursor:pointer;font-weight:500;font-size:14px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.view-title{font-family:var(--display);font-stretch:85%;font-weight:700;font-size:18px;margin:6px 0 8px}
+.meta{font-size:13px;color:var(--muted);margin-bottom:8px}
+.empty{padding:36px 20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
+.confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
+@media (max-width:760px){.dash-head{grid-template-columns:1fr}}
+@media (max-width:620px){.who{order:3;flex-basis:100%}.brand{flex:1}}
+thead th.num{font-family:var(--body);white-space:normal;min-width:84px}
+td:nth-child(2){min-width:130px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script src="config.js"></script>
+</head>
+<body>
+
+<div id="banner" class="banner" hidden></div>
+<header class="bar" id="bar" hidden>
+  <div class="in">
+    <div class="brand"><svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 15c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2" fill="none" stroke="var(--flood)" stroke-width="2.2" stroke-linecap="round"/><path d="M2 20c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2" fill="none" stroke="var(--silt)" stroke-width="2.2" stroke-linecap="round"/><path d="M12 3l3.5 6h-7z" fill="var(--flood)"/></svg>El Niño Flood Reporting</div>
+    <div class="who" id="who"></div>
+    <button class="btn ghost sm" id="goHome" type="button">Home</button>
+    <button class="btn sm" id="lock" type="button">Lock</button>
+  </div>
+</header>
+<main id="app"></main>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+const DATA = {"districts":[{"c":"baki","r":"awdal","n":"Baki"},{"c":"borama","r":"awdal","n":"Borama"},{"c":"lughaye","r":"awdal","n":"Lughaye"},{"c":"zeylac","r":"awdal","n":"Zeylac"},{"c":"ceel_barde","r":"bakool","n":"Ceel Barde"},{"c":"rab_dhuure","r":"bakool","n":"Rab Dhuure"},{"c":"tayeeglow","r":"bakool","n":"Tayeeglow"},{"c":"waajid","r":"bakool","n":"Waajid"},{"c":"xudur","r":"bakool","n":"Xudur"},{"c":"abdiaziz","r":"banadir","n":"Abdiaziz"},{"c":"bondhere","r":"banadir","n":"Bondhere"},{"c":"daynile","r":"banadir","n":"Daynile"},{"c":"dharkenley","r":"banadir","n":"Dharkenley"},{"c":"hamar_jajab","r":"banadir","n":"Hamar Jajab"},{"c":"hamar_weyne","r":"banadir","n":"Hamar Weyne"},{"c":"heliwaa","r":"banadir","n":"Heliwaa"},{"c":"hodan","r":"banadir","n":"Hodan"},{"c":"howlwadaag","r":"banadir","n":"Howlwadaag"},{"c":"karaan","r":"banadir","n":"Karaan"},{"c":"kaxda","r":"banadir","n":"Kaxda"},{"c":"shangani","r":"banadir","n":"Shangani"},{"c":"shibis","r":"banadir","n":"Shibis"},{"c":"waaberi","r":"banadir","n":"Waaberi"},{"c":"wadajir","r":"banadir","n":"Wadajir"},{"c":"warta_nabada","r":"banadir","n":"Warta Nabada"},{"c":"yaqshid","r":"banadir","n":"Yaqshid"},{"c":"bandarbeyla","r":"bari","n":"Bandarbeyla"},{"c":"bossaso","r":"bari","n":"Bossaso"},{"c":"caluula","r":"bari","n":"Caluula"},{"c":"iskushuban","r":"bari","n":"Iskushuban"},{"c":"qandala","r":"bari","n":"Qandala"},{"c":"qardho","r":"bari","n":"Qardho"},{"c":"baidoa","r":"bay","n":"Baidoa"},{"c":"berdale","r":"bay","n":"Berdale"},{"c":"buur_hakaba","r":"bay","n":"Buur Hakaba"},{"c":"diinsoor","r":"bay","n":"Diinsoor"},{"c":"qansax_dheere","r":"bay","n":"Qansax Dheere"},{"c":"cabudwaaq","r":"galgaduud","n":"Cabudwaaq"},{"c":"cadaado","r":"galgaduud","n":"Cadaado"},{"c":"ceel_buur","r":"galgaduud","n":"Ceel Buur"},{"c":"ceel_dheer","r":"galgaduud","n":"Ceel Dheer"},{"c":"dhuusamarreeb","r":"galgaduud","n":"Dhuusamarreeb"},{"c":"baardheere","r":"gedo","n":"Baardheere"},{"c":"belet_xaawo","r":"gedo","n":"Belet Xaawo"},{"c":"ceel_waaq","r":"gedo","n":"Ceel Waaq"},{"c":"doolow","r":"gedo","n":"Doolow"},{"c":"garbahaarey","r":"gedo","n":"Garbahaarey"},{"c":"luuq","r":"gedo","n":"Luuq"},{"c":"belet_weyne","r":"hiraan","n":"Belet Weyne"},{"c":"bulo_burto","r":"hiraan","n":"Bulo Burto"},{"c":"jalalaqsi","r":"hiraan","n":"Jalalaqsi"},{"c":"mataban","r":"hiraan","n":"Mataban"},{"c":"maxaas","r":"hiraan","n":"Maxaas"},{"c":"afmadow","r":"lower_juba","n":"Afmadow"},{"c":"badhaadhe","r":"lower_juba","n":"Badhaadhe"},{"c":"jamaame","r":"lower_juba","n":"Jamaame"},{"c":"kismaayo","r":"lower_juba","n":"Kismaayo"},{"c":"afgooye","r":"lower_shabelle","n":"Afgooye"},{"c":"baraawe","r":"lower_shabelle","n":"Baraawe"},{"c":"kurtunwaarey","r":"lower_shabelle","n":"Kurtunwaarey"},{"c":"marka","r":"lower_shabelle","n":"Marka"},{"c":"qoryooley","r":"lower_shabelle","n":"Qoryooley"},{"c":"sablaale","r":"lower_shabelle","n":"Sablaale"},{"c":"wanla_weyn","r":"lower_shabelle","n":"Wanla Weyn"},{"c":"buale","r":"middle_juba","n":"Bu'aale"},{"c":"jilib","r":"middle_juba","n":"Jilib"},{"c":"saakow","r":"middle_juba","n":"Saakow"},{"c":"adan_yabaal","r":"middle_shabelle","n":"Adan Yabaal"},{"c":"balcad","r":"middle_shabelle","n":"Balcad"},{"c":"cadale","r":"middle_shabelle","n":"Cadale"},{"c":"jowhar","r":"middle_shabelle","n":"Jowhar"},{"c":"gaalkacyo","r":"mudug","n":"Gaalkacyo"},{"c":"galdogob","r":"mudug","n":"Galdogob"},{"c":"hobyo","r":"mudug","n":"Hobyo"},{"c":"jariiban","r":"mudug","n":"Jariiban"},{"c":"xarardheere","r":"mudug","n":"Xarardheere"},{"c":"burtinle","r":"nugaal","n":"Burtinle"},{"c":"eyl","r":"nugaal","n":"Eyl"},{"c":"garowe","r":"nugaal","n":"Garowe"},{"c":"ceel_afweyn","r":"sanaag","n":"Ceel Afweyn"},{"c":"ceerigaabo","r":"sanaag","n":"Ceerigaabo"},{"c":"laasqoray","r":"sanaag","n":"Laasqoray"},{"c":"caynabo","r":"sool","n":"Caynabo"},{"c":"laas_caanood","r":"sool","n":"Laas Caanood"},{"c":"taleex","r":"sool","n":"Taleex"},{"c":"xudun","r":"sool","n":"Xudun"},{"c":"burao","r":"togdheer","n":"Burao"},{"c":"buuhoodle","r":"togdheer","n":"Buuhoodle"},{"c":"oodweyne","r":"togdheer","n":"Oodweyne"},{"c":"sheikh","r":"togdheer","n":"Sheikh"},{"c":"berbera","r":"woqooyi_galbeed","n":"Berbera"},{"c":"gebiley","r":"woqooyi_galbeed","n":"Gebiley"},{"c":"hargeysa","r":"woqooyi_galbeed","n":"Hargeysa"}]};
+const API_URL = String(window.FLOOD_API_URL||"").trim();
+
+/* ---------- reference tables ---------- */
+const REGIONS = {awdal:"Awdal",bakool:"Bakool",banadir:"Banadir",bari:"Bari",bay:"Bay",galgaduud:"Galgaduud",gedo:"Gedo",hiraan:"Hiraan",lower_juba:"Lower Juba",lower_shabelle:"Lower Shabelle",middle_juba:"Middle Juba",middle_shabelle:"Middle Shabelle",mudug:"Mudug",nugaal:"Nugaal",sanaag:"Sanaag",sool:"Sool",togdheer:"Togdheer",woqooyi_galbeed:"Woqooyi Galbeed"};
+const DIST = {}; DATA.districts.forEach(d=>DIST[d.c]=d);
+const dName = c => DIST[c]?.n || c || "";
+const rName = c => REGIONS[c] || c || "";
+
+const ABC_ROLE=[["lead","ABC Facilitator"],["co_lead","ABC Co-Facilitator"],["member","ABC Member"],["other","OCHA staff"],["other___not_part_of_an_abc_forum","Other / not part of an ABC forum"]];
+const CRISIS=[["flood","Flood"],["conflict","Conflict"],["disease_outbreak","Disease outbreak"],["drought","Drought"]];
+const EVENT=[["ongoing","Ongoing"],["stabilised","Stabilised"],["ended","Ended"],["unknown","Unknown"]];
+const LOCTYPE=[["settlement","Settlement or village"],["site","Displacement site"],["catchment_location","Catchment location"],["other_specific_location","Other specific location"]];
+const ACCESS=[["accessible","Accessible"],["partially_accessible","Partially accessible"],["not_accessible","Not accessible"],["unable_to_assess","Unable to assess"]];
+const CONSTR=[["floodwater","Floodwater"],["road_bridge_damage","Road or bridge damage"],["insecurity","Insecurity"],["movement_restrictions","Movement restrictions"],["administrative_restrictions","Administrative restrictions"],["gatekeeping","Gatekeeping"],["transport_unavailable","Transport unavailable"],["communications_outage","Communications outage"],["other","Other"],["unknown","Unknown"]];
+const SOURCE=[["direct_observation","Direct observation"],["local_authority","Local authority"],["community_source","Community source"],["humanitarian_partner","Humanitarian partner"],["health_or_service_facility","Health or service facility"],["remote_sensing","Remote sensing"],["public_report","Public report"],["cccm","CCCM"]];
+const IMPACT_NUM=[["people_affected","Number of people affected"],["returnees","Number of people who CAME to this settlement or site"],["deaths","Number of deaths"],["injuries","Number of people injured"],["shelters_damaged","Number of shelters or houses damaged"],["shelters_destroyed","Number of shelters or houses destroyed"],["latrines_damaged","Number of latrines damaged or flooded"],["water_points_damaged","Number of water points damaged"],["farmland_affected","Amount of farmland affected (hectares)"],["schools_affected","Number of schools affected"],["health_facilities_affected","Number of health facilities affected"],["livestock_dead","Number of livestock dead"]];
+/* Impact dashboard columns, in the Power BI order */
+const IMPACT_COLS=[["people_affected","Total Affected"],["returnees","Displaced to this site"],["deaths","Total Deaths"],["injuries","Total Injured"],["shelters_destroyed","Shelters or houses destroyed"],["shelters_damaged","Shelter Damaged"],["latrines_damaged","Latrines damaged or flooded"],["water_points_damaged","Water points damaged"],["farmland_affected","Farmland affected (hectares)"],["schools_affected","Schools affected"],["health_facilities_affected","Health facilities affected"],["livestock_dead","Livestock dead"]];
+
+const RESP_STATUS=[["not_started","Not started"],["mobilising","Mobilising"],["in_progress","Response in progress"],["completed","Completed"]];
+/* Response form indicators: [field, short heading, full Kobo label, sector] */
+const RESP_IND=[
+ ["Food_rations","CBT Food","People reached by: Cash Based Transfer (CBT) Food Security Cluster","Food Security"],
+ ["RUTF","RUTF","People reached by: RUTF (ready-to-use therapeutic food)","Nutrition"],
+ ["F75","F75","People reached by: F75 therapeutic milk","Nutrition"],
+ ["F100","F100","People reached by: F100 therapeutic milk","Nutrition"],
+ ["RUSF","RUSF","People reached by: RUSF (ready-to-use supplementary food)","Nutrition"],
+ ["LNS_MQ","LNS-MQ","People reached by: Lipid-based Nutrient Supplement - Medium Quantity (LNS-MQ) (PDoz)","Nutrition"],
+ ["MPCA","MPCA","People reached by: Cash - MPCA","Multipurpose Cash"],
+ ["Hygiene_kits","Hygiene kits","People reached by: Hygiene kits","WASH"],
+ ["Aquatabs","Aquatabs","People reached by: Household water treatment: Aquatabs","WASH"],
+ ["HH_WT_Chlor_Floc","HH WT Chlor-Floc","People reached by: Household water treatment: Chlor-Floc","WASH"],
+ ["Bulk_water_treatment","Bulk water treatment","People reached by: Bulk water treatment: HTH 65%","WASH"],
+ ["MedConsultation","Medical consultations","Total medical consultations provided/ conducted","Health"],
+ ["Med_Refferals","Referrals","Total referrals supported","Health"],
+ ["MobileTeams","Mobile teams","Mobile teams mobilized","Health"],
+ ["Essential_Medicines","Essential medicines","People reached by: Essential medicines and supplies","Health"],
+ ["GP_CaseManagement","Gen. Protection case mgmt","People reached by: General Protection Case Management","Protection"],
+ ["Child_Protection","Child Protection","People reached by: Protection related services - Child-Protection","Protection"],
+ ["GBV_related","GBV","People reached by: Protection related services - GBV","Protection"],
+ ["NFI_kits","NFI kits","People reached by: NFI kits","Shelter and NFI"],
+ ["ShelterKits_PlasticSheet","Shelter kits / Plastic sheets","People reached by: Shelter kits / Plastic sheets","Shelter and NFI"],
+ ["ChildrenEducation","Children Education","Children reached by: Education in Emergencies Service","Education"]];
+
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
+const fmt=n=>n? (Math.round(n*100)/100).toLocaleString("en-US") : "";
+const slug=s=>String(s||"").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").slice(0,60)||"x";
+const label=(list,v)=>(list.find(x=>x[0]===v)||[,v||""])[1];
+const today=()=>new Date().toISOString().slice(0,10);
+function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3200)}
+
+/* ---------- storage: Google Apps Script web app (Google Sheet) ---------- */
+const store={mode:"loading",impact:new Map(),response:new Map(),timer:null};
+const API_ERR={bad_pin:"That code isn't recognised. Check it against the code list from your ABC forum and try again.",not_allowed:"Your code doesn't allow this action for that district.",busy:"The database is busy. Try again in a moment."};
+async function api(action,payload={}){
+  if(!API_URL) throw new Error("This site isn't connected to its database yet. Add the Apps Script web app URL to config.js.");
+  let res;
+  try{ res=await fetch(API_URL,{method:"POST",body:JSON.stringify({action,pin:S.pin,...payload})}); }
+  catch(e){ throw new Error("Can't reach the database. Check your internet connection and try again."); }
+  let j; try{ j=await res.json(); }catch(e){ throw new Error("The database sent an unexpected reply. Check that the web app is deployed with access for Anyone."); }
+  if(!j.ok){ const err=new Error(API_ERR[j.error]||j.error||"Request failed"); err.code=j.error; throw err; }
+  return j;
+}
+async function loadData(quiet){
+  try{
+    const j=await api("list");
+    store.impact=new Map(j.impact.map(r=>[r.id,r])); store.response=new Map(j.response.map(r=>[r.id,r]));
+    store.mode="api"; $("#banner").hidden=true; rerender();
+  }catch(e){ if(!quiet) showBanner(e.message); }
+}
+function startSync(){ clearInterval(store.timer); store.mode="loading"; loadData(); store.timer=setInterval(()=>loadData(true),60000); }
+function stopSync(){ clearInterval(store.timer); store.impact=new Map(); store.response=new Map(); store.mode="loading"; }
+async function saveDoc(coll,id,data){ const j=await api("save",{coll,rec:{...data,id}}); store[coll].set(id,j.rec); }
+async function deleteDoc(coll,id){ await api("delete",{coll,id}); store[coll].delete(id); }
+function showBanner(t){const b=$("#banner");b.textContent=t;b.hidden=false}
+
+/* ---------- session ---------- */
+const S={pin:null,types:new Set(),districts:new Set(),view:"pin",dirty:false};
+const allowed=c=>S.districts.has(c);
+const myRegions=()=>[...new Set([...S.districts].map(c=>DIST[c]?.r).filter(Boolean))].sort((a,b)=>rName(a).localeCompare(rName(b)));
+const myDistricts=r=>[...S.districts].filter(c=>!r||DIST[c]?.r===r).sort((a,b)=>dName(a).localeCompare(dName(b)));
+const canDo={impactEntry:()=>S.types.has("IM"),responseReport:()=>S.types.has("IM"),responseEntry:()=>S.types.has("RM"),impactReport:()=>S.types.has("RM")};
+
+function go(view){
+  if(S.dirty && view!==S.view && !go.force){ pendingLeave(view); return; }
+  go.force=false; S.dirty=false; S.view=view; render(); window.scrollTo(0,0);
+}
+function pendingLeave(view){
+  const host=document.querySelector("#leaveBox"); if(!host) { go.force=true; go(view); return; }
+  host.hidden=false; host.innerHTML=`<div class="msg bad">You have unsaved changes. <button class="btn sm" id="lvYes" type="button">Leave without saving</button> <button class="btn sm ghost" id="lvNo" type="button">Stay</button></div>`;
+  $("#lvYes").onclick=()=>{go.force=true;go(view)}; $("#lvNo").onclick=()=>{host.hidden=true};
+}
+function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
+
+$("#goHome").onclick=()=>go("home");
+$("#lock").onclick=()=>{ go.force=true; stopSync(); S.pin=null; S.types=new Set(); S.districts=new Set(); go("pin"); };
+
+function render(){
+  $("#bar").hidden = S.view==="pin";
+  if(S.pin){
+    const n=S.districts.size;
+    const list=[...S.districts].map(dName).sort();
+    $("#who").innerHTML=`Code <b>${esc(S.pin)}</b> · ${n>6? n+" districts" : esc(list.join(", "))}`;
+  }
+  if(S.view!=="pin" && (!S.pin || (canDo[S.view] && !canDo[S.view]()))) S.view = S.pin? "home":"pin";
+  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport})[S.view]();
+}
+
+/* ---------- PIN page ---------- */
+function renderPin(){
+  $("#app").innerHTML=`<section class="pin"><form class="pin-card" id="pinForm" autocomplete="off">
+    <div class="eyebrow">Area-Based Coordination · Somalia</div>
+    <h1>Enter your district code</h1>
+    <p>Use the code shared with your ABC forum. It opens the forms and reports for your districts only.</p>
+    <input class="pin-input" id="pinIn" inputmode="text" maxlength="12" placeholder="IM00000" aria-label="District code" autofocus>
+    <div id="pinMsg" class="msg bad" hidden></div>
+    <button class="btn primary" type="submit">Unlock</button>
+  </form></section>`;
+  $("#pinForm").onsubmit=async e=>{
+    e.preventDefault();
+    const v=$("#pinIn").value.trim().toUpperCase(); const m=$("#pinMsg"); const btn=$("#pinForm button");
+    if(!v){ m.hidden=false; m.textContent="Enter your code to continue."; return; }
+    btn.disabled=true; btn.textContent="Checking…"; m.hidden=true;
+    try{
+      const j=await api("login",{pin:v});
+      S.pin=v; S.types=new Set(j.types); S.districts=new Set(j.districts); startSync(); go("home");
+    }catch(err){ m.hidden=false; m.textContent=err.message; btn.disabled=false; btn.textContent="Unlock"; $("#pinIn").select(); }
+  };
+}
+
+/* ---------- Home ---------- */
+function renderHome(){
+  const t=[
+    ["impactEntry","1","Flood Impact entry","Record the first picture of flood impact for one settlement or site at a time.","impact"],
+    ["responseEntry","2","Flood Response entry","Report people reached by sector against each affected village, in one table.","response"],
+    ["impactReport","3","Flood Impact Report","Location summary and detail of reported impact for your districts.","impact"],
+    ["responseReport","4","Flood Response Report","Village summary, partner mapping and organisation entries.","response"]];
+  const typeTxt = S.types.has("IM")&&S.types.has("RM") ? "Coordination code (all functions)" : S.types.has("IM") ? "IMPACT Kobo and Response Power BI code" : "Response Kobo and IMPACT Power BI code";
+  const rows=[...S.districts].map(c=>`<span class="chip">${esc(dName(c))} · ${esc(rName(DIST[c]?.r))}</span>`).join("");
+  $("#app").innerHTML=`<div class="wrap">
+    <div class="home-head"><div class="eyebrow">${esc(typeTxt)}</div><h1>What would you like to do?</h1>
+    <div class="chips">${S.districts.size>12? `<span class="chip">All ${S.districts.size} districts</span>`: rows}</div></div>
+    <div class="tiles">${t.map(([v,n,h,p,k])=>{const ok=canDo[v]();return `<button type="button" class="tile ${k}" data-go="${v}" ${ok?"":"disabled"} aria-disabled="${!ok}">
+      <span class="n">${n}</span><h2>${h}</h2><p>${p}</p><span class="state">${ok?"Available":"Not available with this code"}</span></button>`}).join("")}</div>
+    <p class="note">Codes starting IM open Flood Impact entry and the Flood Response Report. Codes starting RM open Flood Response entry and the Flood Impact Report. Data shown everywhere is limited to the districts linked to your code.</p>
+  </div>`;
+  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ if(!b.disabled) go(b.dataset.go) });
+}
+
+/* ---------- 1. Impact entry ---------- */
+const radios=(name,list,req)=>`<div class="opts" role="radiogroup">${list.map(([v,l])=>`<label class="opt"><input type="radio" name="${name}" value="${v}" ${req?"data-req":""}> ${esc(l)}</label>`).join("")}</div>`;
+const checks=(name,list)=>`<div class="opts">${list.map(([v,l])=>`<label class="opt"><input type="checkbox" name="${name}" value="${v}"> ${esc(l)}</label>`).join("")}</div>`;
+let editingImpact=null;
+function renderImpactEntry(){
+  const regs=myRegions();
+  $("#app").innerHTML=`<div class="wrap narrow">
+   <div class="page-head"><div><div class="eyebrow">1 · Flood Impact entry</div><h1>El Niño | Impact Reporting Form</h1>
+   <div class="sub">Record the first traceable picture of the crisis within 24 hours. Do not record priority needs, response activities, people reached or delivered quantities. Report ONE settlement or site per record.</div></div></div>
+   <div id="leaveBox" hidden></div>
+   <form id="impForm" novalidate>
+   <fieldset><legend>Impact Report</legend><div class="grid2">
+     <div class="f"><label class="req" for="reporting_organisation">Reporting organisation</label><input type="text" id="reporting_organisation" name="reporting_organisation" data-req></div>
+   </div>
+     <div class="f"><span class="lab req">Role in the Area-Based Coordination (ABC) forum</span>${radios("abc_role",ABC_ROLE,1)}</div>
+   </fieldset>
+   <fieldset><legend>Crisis facts</legend>
+     <div class="f"><span class="lab req">What type of crisis is being reported?</span>${radios("crisis_type",CRISIS,1)}</div>
+     <div class="grid2">
+       <div class="f"><label for="crisis_onset">When did the crisis begin or first become evident?</label><input type="date" id="crisis_onset" name="crisis_onset"></div>
+       <div class="f"><label for="report_reference">What is the reference date for this report?</label><input type="date" id="report_reference" name="report_reference"></div>
+     </div>
+     <div class="f"><span class="lab req">What is the current status of the event?</span>${radios("event_status",EVENT,1)}</div>
+     <div class="f"><label class="req" for="event_summary">Briefly describe what happened using reported facts only.</label><textarea id="event_summary" name="event_summary" data-req></textarea></div>
+   </fieldset>
+   <fieldset id="locSet"><legend>Settlement and site impacts</legend>
+     <div class="grid2">
+      <div class="f"><label class="req" for="affected_region">Region</label><select id="affected_region" name="affected_region" data-req><option value="">Select region</option>${regs.map(r=>`<option value="${r}">${esc(rName(r))}</option>`).join("")}</select></div>
+      <div class="f"><label class="req" for="affected_district">District</label><select id="affected_district" name="affected_district" data-req><option value="">Select district</option></select></div>
+     </div>
+     <div class="scope">Report ONE settlement or site per record. To add another location for the same impact, use <b>Save and add another location</b>.</div>
+     <div class="grid2">
+      <div class="f"><label class="req" for="affected_settlement">Settlement, village, site, catchment name</label><input type="text" id="affected_settlement" name="affected_settlement" data-req list="settleList"><datalist id="settleList"></datalist></div>
+     </div>
+     <div class="f"><span class="lab req">What type of settlement or site is this?</span>${radios("location_type",LOCTYPE,1)}</div>
+     <div class="grid2">
+      <div class="f"><label for="geo_lat">GPS latitude</label><input type="number" step="any" id="geo_lat" name="geo_lat" placeholder="e.g. 2.0469"><span class="hint">Capture a GPS point, if safe and feasible.</span></div>
+      <div class="f"><label for="geo_lon">GPS longitude</label><input type="number" step="any" id="geo_lon" name="geo_lon" placeholder="e.g. 45.3182"></div>
+     </div>
+     <div class="f"><label for="location_reference_note">Add a map, landmark or location reference if needed.</label><input type="text" id="location_reference_note" name="location_reference_note"></div>
+     <div class="grid2">${IMPACT_NUM.map(([k,l])=>`<div class="f"><label for="${k}">${esc(l)}</label><input type="number" min="0" step="${k==="farmland_affected"?"any":"1"}" id="${k}" name="${k}"></div>`).join("")}</div>
+   </fieldset>
+   <fieldset><legend>Access</legend>
+     <div class="f"><span class="lab req">What is the overall access status to the affected settlements or sites?</span>${radios("access_status",ACCESS,1)}</div>
+     <div class="f" id="constrBox" hidden><span class="lab">What access constraints are reported?</span>${checks("reported_access_constraints",CONSTR)}</div>
+     <div class="f"><label for="reported_access_note">Describe the access constraints and affected locations</label><textarea id="reported_access_note" name="reported_access_note"></textarea></div>
+   </fieldset>
+   <fieldset><legend>Source</legend>
+     <div class="f"><span class="lab">Main source of the impact figures for this settlement or site</span>${checks("main_source",SOURCE)}</div>
+     <div class="f"><label for="human_source_reference">Source organisation, facility or document reference</label><input type="text" id="human_source_reference" name="human_source_reference"></div>
+   </fieldset>
+   <div id="impMsg" class="msg" hidden></div>
+   <div class="actions">
+     <button class="btn primary" type="submit" data-mode="done">Submit</button>
+     <button class="btn" type="submit" data-mode="again">Save and add another location</button>
+     <button class="btn ghost" type="button" id="impReset">Clear form</button>
+     <span id="editTag" class="pill new" hidden>Editing a saved record</span>
+   </div>
+   </form>
+   <h2 style="margin:34px 0 10px;font-size:22px">Saved impact records for your districts</h2>
+   <div id="impList"></div>
+  </div>`;
+  const f=$("#impForm");
+  const fillDist=()=>{const r=f.affected_region.value;f.affected_district.innerHTML=`<option value="">Select district</option>`+myDistricts(r).map(c=>`<option value="${c}">${esc(dName(c))}</option>`).join("");};
+  f.affected_region.onchange=()=>{fillDist();fillSettle()};
+  const fillSettle=()=>{const d=f.affected_district.value;const s=new Set();store.impact.forEach(r=>{if(r.affected_district===d&&r.affected_settlement)s.add(r.affected_settlement)});$("#settleList").innerHTML=[...s].map(x=>`<option value="${esc(x)}">`).join("")};
+  f.affected_district.onchange=fillSettle;
+  if(regs.length===1){f.affected_region.value=regs[0];fillDist();}
+  if(myDistricts().length===1){f.affected_district.value=myDistricts()[0];}
+  f.querySelector('input[name=crisis_type][value=flood]').checked=true;
+  f.report_reference.value=today();
+  f.oninput=()=>{S.dirty=true};
+  const syncAccess=()=>{const v=f.querySelector('input[name=access_status]:checked')?.value;const show=!!v&&v!=="accessible";$("#constrBox").hidden=!show;if(!show)f.querySelectorAll('input[name=reported_access_constraints]').forEach(i=>i.checked=false);};
+  f.querySelectorAll('input[name=access_status]').forEach(i=>i.addEventListener("change",syncAccess)); f.syncAccess=syncAccess;
+  let mode="done"; f.querySelectorAll("button[type=submit]").forEach(b=>b.onclick=()=>mode=b.dataset.mode);
+  $("#impReset").onclick=()=>{editingImpact=null;renderImpactEntry()};
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    const m=$("#impMsg"); f.querySelectorAll(".invalid").forEach(x=>x.classList.remove("invalid"));
+    const missing=[];
+    f.querySelectorAll("[data-req]").forEach(el=>{
+      if(el.type==="radio"){ const g=f.querySelectorAll(`input[name="${el.name}"]`); if(![...g].some(x=>x.checked)){ const box=el.closest(".opts"); if(!box.classList.contains("invalid")){box.classList.add("invalid");missing.push(box.closest(".f").querySelector(".lab").textContent)} } }
+      else if(!el.value.trim()){ el.classList.add("invalid"); missing.push(f.querySelector(`label[for="${el.id}"]`)?.textContent||el.name); }
+    });
+    if(missing.length){ m.hidden=false; m.className="msg bad"; m.textContent="Complete the required fields: "+missing.join("; "); f.querySelector(".invalid")?.scrollIntoView({block:"center",behavior:"smooth"}); return; }
+    const fd=new FormData(f); const rec={};
+    for(const [k,v] of fd.entries()){ if(k==="reported_access_constraints"||k==="main_source"){ (rec[k]=rec[k]||[]).push(v);} else rec[k]=typeof v==="string"? v.trim():v; }
+    IMPACT_NUM.forEach(([k])=>{ rec[k]= rec[k]===""||rec[k]==null? null : num(rec[k]); });
+    if(!allowed(rec.affected_district)){ m.hidden=false;m.className="msg bad";m.textContent="That district isn't linked to your code.";return; }
+    rec._pin=S.pin; rec._savedAt=new Date().toISOString();
+    const id = editingImpact || ("imp-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7));
+    if(editingImpact){ rec._createdAt = store.impact.get(editingImpact)?._createdAt || rec._savedAt; } else rec._createdAt=rec._savedAt;
+    try{ await saveDoc("impact",id,rec); }catch(err){ m.hidden=false;m.className="msg bad";m.textContent=err.message;return; }
+    S.dirty=false; editingImpact=null;
+    toast(`Saved: ${rec.affected_settlement}, ${dName(rec.affected_district)}`);
+    if(mode==="again"){
+      $("#locSet").querySelectorAll("input[type=text],input[type=number]").forEach(i=>i.value="");
+      f.querySelectorAll('input[name=location_type]').forEach(i=>i.checked=false);
+      $("#editTag").hidden=true; m.hidden=false; m.className="msg ok"; m.textContent="Saved. Organisation and crisis facts are kept; enter the next settlement or site.";
+      fillSettle(); $("#affected_settlement").focus(); renderImpactList();
+    } else { go.force=true; go("impactEntry"); }
+  };
+  renderImpactList();
+}
+function loadImpactIntoForm(id){
+  const r=store.impact.get(id); if(!r) return;
+  renderImpactEntry(); editingImpact=id; const f=$("#impForm");
+  f.affected_region.value=r.affected_region||""; f.affected_region.onchange();
+  f.affected_district.value=r.affected_district||"";
+  for(const [k,v] of Object.entries(r)){
+    if(k.startsWith("_")||k==="affected_region"||k==="affected_district") continue;
+    const els=f.querySelectorAll(`[name="${k}"]`);
+    els.forEach(el=>{ if(el.type==="radio") el.checked=el.value===v; else if(el.type==="checkbox") el.checked=Array.isArray(v)&&v.includes(el.value); else el.value=v??""; });
+  }
+  ["reported_access_constraints","main_source"].forEach(k=>{ if(!r[k]) f.querySelectorAll(`[name="${k}"]`).forEach(el=>el.checked=false) });
+  f.syncAccess(); $("#editTag").hidden=false; f.scrollIntoView({behavior:"smooth"});
+}
+function renderImpactList(){
+  const host=$("#impList"); if(!host) return;
+  const rows=[...store.impact.entries()].filter(([,r])=>allowed(r.affected_district)).sort((a,b)=>(b[1]._savedAt||"").localeCompare(a[1]._savedAt||""));
+  if(!rows.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No impact records yet</b>Records you submit above for your districts will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
+  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th>Reference date</th><th>District</th><th>Settlement / site</th><th>Organisation</th><th class="num">Affected</th><th class="num">Deaths</th><th>Status</th><th></th></tr></thead><tbody>
+  ${rows.map(([id,r])=>`<tr><td>${esc(r.report_reference||(r._savedAt||"").slice(0,10))}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.reporting_organisation)}</td><td class="num">${fmt(num(r.people_affected))}</td><td class="num">${fmt(num(r.deaths))}</td><td>${esc(label(EVENT,r.event_status))}</td>
+  <td style="white-space:nowrap"><button class="btn sm" type="button" data-edit="${id}">Edit</button> <span data-delbox="${id}"><button class="btn sm ghost" type="button" data-del="${id}">Delete</button></span></td></tr>`).join("")}</tbody></table></div>`;
+  host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>loadImpactIntoForm(b.dataset.edit));
+  host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const box=host.querySelector(`[data-delbox="${b.dataset.del}"]`);box.innerHTML=`<span class="confirm">Delete? <button class="btn sm danger" type="button">Yes</button><button class="btn sm ghost" type="button">No</button></span>`;const [y,n]=box.querySelectorAll("button");y.onclick=async()=>{try{await deleteDoc("impact",b.dataset.del);toast("Record deleted");renderImpactList()}catch(e){toast("Couldn't delete: "+(e.message||e.code))}};n.onclick=renderImpactList;});
+}
+
+/* ---------- 2. Response entry ---------- */
+let respOrg="";
+function respRows(){
+  const map=new Map();
+  const add=(d,s,r,src)=>{ if(!d||!s||!allowed(d)) return; const k=d+"|"+s.trim().toLowerCase(); if(!map.has(k)) map.set(k,{district:d,region:r||DIST[d]?.r,settlement:s.trim(),src}); };
+  store.impact.forEach(r=>add(r.affected_district,r.affected_settlement,r.affected_region,"impact"));
+  store.response.forEach(r=>add(r.affected_district,r.affected_settlement,r.affected_region,"response"));
+  return [...map.values()].sort((a,b)=>dName(a.district).localeCompare(dName(b.district))||a.settlement.localeCompare(b.settlement));
+}
+const respId=(org,d,s)=>`${slug(org)}__${d}__${slug(s)}`;
+function renderResponseEntry(){
+  const orgs=[...new Set([...store.response.values()].filter(r=>allowed(r.affected_district)).map(r=>r.Reporting_Organisation_Name).filter(Boolean))].sort();
+  const rows=respRows();
+  const sectors=[]; RESP_IND.forEach(i=>{const last=sectors[sectors.length-1]; if(last&&last[0]===i[3]) last[1]++; else sectors.push([i[3],1]);});
+  $("#app").innerHTML=`<div class="wrap">
+   <div class="page-head"><div><div class="eyebrow">2 · Flood Response entry</div><h1>El Niño | Partner Response Report</h1>
+   <div class="sub">One row per affected village or site from the impact reports for your districts. Enter your organisation name, fill in the rows where you responded, then press Submit. Blank rows are not submitted. Submitted rows are listed below the table; submitting the same village again updates your earlier entry.</div></div></div>
+   <div id="leaveBox" hidden></div>
+   <fieldset><legend>Response Report</legend><div class="grid2">
+     <div class="f"><label class="req" for="org">Reporting Organisation Name</label><input type="text" id="org" list="orgList" value="${esc(respOrg)}" placeholder="Your organisation"><datalist id="orgList">${orgs.map(o=>`<option value="${esc(o)}">`).join("")}</datalist><span class="hint">Your organisation's earlier entries load into the table when you enter its name.</span></div>
+     <div class="f"><label for="rfc">Response Form Code</label><input type="text" id="rfc" value="${esc(S.pin)}" readonly></div>
+     <div class="f"><label for="fDist">Show district</label><select id="fDist"><option value="">All my districts</option>${myDistricts().map(c=>`<option value="${c}">${esc(dName(c))}</option>`).join("")}</select></div>
+     <div class="f"><label for="fSearch">Find village or site</label><input type="text" id="fSearch" placeholder="Type to filter"></div>
+   </div></fieldset>
+   <div class="tbl-wrap"><table class="entry" id="respTbl">
+    <thead><tr class="grp"><th class="stick"></th><th colspan="3">Response</th>${sectors.map(([s,n])=>`<th colspan="${n}">${esc(s)}</th>`).join("")}<th colspan="2">Other items</th><th colspan="4">Response details</th></tr>
+    <tr><th class="stick">Village / settlement</th><th class="req">Update date</th><th class="req">Current response status</th><th class="req">TOTAL people supported</th>
+    ${RESP_IND.map(i=>`<th title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}
+    <th>Response Type - Other</th><th>Other - people reached</th><th>Actual start date</th><th>Actual completion date</th><th>Brief update note</th><th class="req">Confirm accurate</th></tr></thead>
+    <tbody>${rows.length? rows.map((r,i)=>respRowHtml(r,i)).join("") : `<tr><td colspan="40"><div class="empty" style="text-align:left"><b>No villages listed yet</b>Villages appear here once impact reports are submitted for your districts.</div></td></tr>`}</tbody>
+   </table></div>
+   <div id="respMsg" class="msg" hidden></div>
+   <div class="actions"><button class="btn primary" type="button" id="respSave">Submit</button><span class="meta" id="dirtyCount"></span></div>
+   <h2 style="margin:34px 0 6px;font-size:22px">Submitted responses</h2>
+   <div class="meta">All organisations' submissions for your districts. Use Edit to load an entry back into the table.</div>
+   <div id="respList"></div>
+  </div>`;
+  const tb=$("#respTbl tbody");
+  const loadOrg=()=>{ respOrg=$("#org").value.trim(); tb.querySelectorAll("tr[data-k]:not(.dirty)").forEach(tr=>fillRow(tr)); updDirty(); };
+  $("#org").onchange=loadOrg; $("#org").oninput=e=>{respOrg=e.target.value};
+  loadOrg();
+  tb.addEventListener("input",e=>{const tr=e.target.closest("tr[data-k]"); if(tr){tr.classList.add("dirty");tr.classList.remove("saved","err");S.dirty=true;updDirty();}});
+  tb.addEventListener("change",e=>{const tr=e.target.closest("tr[data-k]"); if(tr){tr.classList.add("dirty");S.dirty=true;updDirty();}});
+  const filt=()=>{const d=$("#fDist").value,q=$("#fSearch").value.trim().toLowerCase();tb.querySelectorAll("tr[data-k]").forEach(tr=>tr.hidden=(d&&tr.dataset.d!==d)||(q&&!tr.dataset.s.toLowerCase().includes(q)))};
+  $("#fDist").onchange=()=>{filt();renderRespList()}; $("#fSearch").oninput=filt;
+  $("#respSave").onclick=saveResponses;
+  renderRespList();
+}
+function renderRespList(){
+  const host=$("#respList"); if(!host) return;
+  const fd=$("#fDist")?.value||"";
+  const recs=[...store.response.entries()].filter(([,r])=>allowed(r.affected_district)&&(!fd||r.affected_district===fd))
+    .sort((a,b)=>(b[1]._savedAt||"").localeCompare(a[1]._savedAt||""));
+  if(!recs.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No submissions yet</b>Rows submitted from the table above will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
+  const when=t=>{if(!t)return"";const d=new Date(t);return isNaN(d)?t:d.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})};
+  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th class="stick">Organisation</th><th>District</th><th>Village / settlement</th><th>Update date</th><th>Status</th><th class="num">TOTAL people</th>${RESP_IND.map(i=>`<th class="num" title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}<th>Other</th><th class="num">Other people</th><th>Start</th><th>Completion</th><th>Note</th><th>Submitted</th><th></th></tr></thead><tbody>
+  ${recs.map(([id,r])=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.report_date)}</td><td>${esc(label(RESP_STATUS,r.response_status))}</td><td class="num">${fmt(num(r.TOTAL_Number_of_People))}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}<td>${esc(r._Response_Type_Other)}</td><td class="num">${fmt(num(r.Response_Type_Other_People_Reached))}</td><td>${esc(r.actual_start)}</td><td>${esc(r.actual_completion)}</td><td>${esc(r.remarks)}</td><td style="white-space:nowrap">${esc(when(r._savedAt))}</td>
+  <td style="white-space:nowrap"><button class="btn sm" type="button" data-redit="${esc(id)}">Edit</button> <span data-rdelbox="${esc(id)}"><button class="btn sm ghost" type="button" data-rdel="${esc(id)}">Delete</button></span></td></tr>`).join("")}</tbody></table></div>`;
+  host.querySelectorAll("[data-redit]").forEach(b=>b.onclick=()=>{
+    const r=store.response.get(b.dataset.redit); if(!r) return;
+    if(S.dirty){ toast("Submit or clear your unsaved rows first"); return; }
+    $("#org").value=r.Reporting_Organisation_Name; respOrg=r.Reporting_Organisation_Name;
+    document.querySelectorAll("#respTbl tr[data-k]").forEach(tr=>fillRow(tr));
+    const tr=[...document.querySelectorAll("#respTbl tr[data-k]")].find(t=>t.dataset.d===r.affected_district&&t.dataset.s===r.affected_settlement);
+    if(tr){ tr.hidden=false; tr.scrollIntoView({block:"center",behavior:"smooth"}); tr.querySelector("input,select")?.focus({preventScroll:true}); }
+  });
+  host.querySelectorAll("[data-rdel]").forEach(b=>b.onclick=()=>{const box=host.querySelector(`[data-rdelbox="${CSS.escape(b.dataset.rdel)}"]`);box.innerHTML=`<span class="confirm">Delete? <button class="btn sm danger" type="button">Yes</button><button class="btn sm ghost" type="button">No</button></span>`;const [y,n]=box.querySelectorAll("button");
+    y.onclick=async()=>{try{await deleteDoc("response",b.dataset.rdel);toast("Submission deleted");if(!S.dirty)document.querySelectorAll("#respTbl tr[data-k]").forEach(tr=>fillRow(tr));renderRespList()}catch(e){toast("Couldn't delete: "+(e.message||e.code))}};n.onclick=renderRespList;});
+}
+function respRowHtml(r,i){
+  const n=(f)=>`<td><input type="number" min="0" data-f="${f}" aria-label="${esc(f)} for ${esc(r.settlement)}"></td>`;
+  return `<tr data-k="${esc(r.district+"|"+r.settlement)}" data-d="${r.district}" data-s="${esc(r.settlement)}">
+   <td class="stick loc"><b>${esc(r.settlement)}</b><small>${esc(dName(r.district))} · ${esc(rName(r.region))}</small>${r.src==="new"?`<br><span class="pill new">Added</span>`:""}</td>
+   <td><input type="date" data-f="report_date"></td>
+   <td><select data-f="response_status"><option value=""></option>${RESP_STATUS.map(([v,l])=>`<option value="${v}">${l}</option>`).join("")}</select></td>
+   ${n("TOTAL_Number_of_People")}
+   ${RESP_IND.map(x=>n(x[0])).join("")}
+   <td><input type="text" data-f="_Response_Type_Other"></td>${n("Response_Type_Other_People_Reached")}
+   <td><input type="date" data-f="actual_start"></td><td><input type="date" data-f="actual_completion"></td>
+   <td><input type="text" data-f="remarks"></td>
+   <td><select data-f="confirm_accuracy" style="width:80px"><option value=""></option><option value="yes">Yes</option><option value="no">No</option></select></td></tr>`;
+}
+function fillRow(tr){
+  const [d]=[tr.dataset.d]; const s=tr.dataset.s;
+  const rec=respOrg? store.response.get(respId(respOrg,d,s)) : null;
+  tr.querySelectorAll("[data-f]").forEach(el=>{ const v=el.dataset.f==="report_date"? today() : (rec? rec[el.dataset.f]:null); el.value = v==null? "" : v; el.classList.remove("invalid"); });
+  tr.classList.remove("dirty","err"); tr.classList.toggle("saved",!!rec);
+}
+function updDirty(){ const n=document.querySelectorAll("#respTbl tr.dirty").length; const el=$("#dirtyCount"); if(el) el.textContent= n? `${n} row${n>1?"s":""} with unsaved changes` : ""; if(!n) S.dirty=false; }
+async function saveResponses(){
+  const m=$("#respMsg"); m.hidden=true;
+  const org=$("#org").value.trim();
+  if(!org){ $("#org").classList.add("invalid"); m.hidden=false;m.className="msg bad";m.textContent="Enter the Reporting Organisation Name first."; $("#org").focus(); return; }
+  $("#org").classList.remove("invalid"); respOrg=org;
+  const trs=[...document.querySelectorAll("#respTbl tr.dirty")];
+  if(!trs.length){ m.hidden=false;m.className="msg ok";m.textContent="Nothing to submit. Fill in at least one row."; return; }
+  const req=["response_status","TOTAL_Number_of_People","confirm_accuracy"];
+  let saved=0, bad=0, err=null;
+  for(const tr of trs){
+    const rec={}; let any=false;
+    tr.querySelectorAll("[data-f]").forEach(el=>{el.classList.remove("invalid"); const f=el.dataset.f; let v=el.value.trim(); if(v!==""&&f!=="report_date") any=true; rec[f]= el.type==="number"? (v===""?null:num(v)) : v; });
+    const id=respId(org,tr.dataset.d,tr.dataset.s);
+    if(!any){ if(store.response.has(id)){ try{await deleteDoc("response",id);}catch(e){} } tr.classList.remove("dirty"); continue; }
+    const miss=req.filter(f=>rec[f]===""||rec[f]==null);
+    if(rec.confirm_accuracy && rec.confirm_accuracy!=="yes") miss.push("confirm_accuracy");
+    if(miss.length){ miss.forEach(f=>tr.querySelector(`[data-f="${f}"]`).classList.add("invalid")); tr.classList.add("err"); bad++; continue; }
+    if(!rec.report_date) rec.report_date=today();
+    Object.assign(rec,{Response_Form_Code:S.pin,Reporting_Organisation_Name:org,affected_region:DIST[tr.dataset.d].r,affected_district:tr.dataset.d,affected_settlement:tr.dataset.s,_savedAt:new Date().toISOString()});
+    try{ await saveDoc("response",id,rec); tr.classList.remove("dirty","err"); tr.classList.add("saved"); saved++; }catch(e){ err=e; break; }
+  }
+  updDirty();
+  m.hidden=false;
+  if(err){ m.className="msg bad"; m.textContent=err.message; return; }
+  m.className= bad? "msg bad":"msg ok";
+  m.textContent = (saved? `Submitted ${saved} row${saved>1?"s":""}. `:"") + (bad? `${bad} row${bad>1?"s are":" is"} missing required fields (highlighted): response status, total people, and "Yes" to confirm accuracy.`:"");
+  if(saved){ toast(`Submitted ${saved} response row${saved>1?"s":""}`); renderRespList(); }
+}
+
+/* ---------- shared dashboard frame ---------- */
+const DASH={impact:{region:"",district:"",view:"summary"},response:{region:"",district:"",view:"village"}};
+function dashFrame(kind,title,views){
+  const st=DASH[kind]; const regs=myRegions();
+  return `<div class="wrap">
+   <div class="dash-head"><div><div class="eyebrow">${kind==="impact"?"3 · Flood Impact Report":"4 · Flood Response Report"}</div><h1><span class="draft">DRAFT</span> - El Niño - ${title}</h1></div>
+   <div class="disclaimer"><b>Disclaimer</b>: The information presented is preliminary and remains subject to verification and updates as new information becomes available. This dashboard is intended to facilitate access to and visualization of available information for ABCs and partners. For official datasets or validated figures, please contact the relevant ABC or OCHA office.</div></div>
+   <div class="toolbar">
+     <div class="f"><label for="dReg">Region</label><select id="dReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
+     <div class="f"><label for="dDist">District</label><select id="dDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
+     <button class="btn" type="button" id="dRefresh" title="Clear filters and reload the latest data">Refresh</button>
+     <div class="seg" role="group" aria-label="Report view">${views.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${st.view===v}">${l}</button>`).join("")}</div>
+   </div>
+   <div id="dBody"></div></div>`;
+}
+function wireDash(kind,draw){
+  const st=DASH[kind];
+  $("#dReg").onchange=e=>{st.region=e.target.value;st.district="";render()};
+  $("#dDist").onchange=e=>{st.district=e.target.value;draw()};
+  $("#dRefresh").onclick=()=>{st.region="";st.district="";loadData();render();toast("Filters cleared · showing latest data")};
+  document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{st.view=b.dataset.v;render()});
+  draw();
+}
+const inFilter=(st,rec)=>allowed(rec.affected_district)&&(!st.region||rec.affected_region===st.region||DIST[rec.affected_district]?.r===st.region)&&(!st.district||rec.affected_district===st.district);
+const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}</div></div>`;
+
+/* ---------- 3. Impact report ---------- */
+function renderImpactReport(){
+  $("#app").innerHTML=dashFrame("impact","Impact Report",[["summary","Location Summary"],["detail","Location Detail"]]);
+  wireDash("impact",drawImpact);
+}
+function drawImpact(){
+  const st=DASH.impact; const recs=[...store.impact.values()].filter(r=>inFilter(st,r));
+  const body=$("#dBody");
+  if(!recs.length){ body.innerHTML=emptyBox("No impact reports for this selection", store.mode==="loading"?"Loading data…":"Impact records submitted through Flood Impact entry for your districts appear here."); return; }
+  const detail=st.view==="detail";
+  const groups=new Map();
+  recs.forEach(r=>{
+    const date=r.report_reference||(r._savedAt||"").slice(0,10);
+    const key=r.affected_district+"|"+(r.affected_settlement||"").trim().toLowerCase()+(detail?"|"+date:"");
+    const g=groups.get(key)||{district:r.affected_district,loc:(r.affected_settlement||"").trim(),date,v:{}}; IMPACT_COLS.forEach(([k])=>g.v[k]=(g.v[k]||0)+num(r[k])); groups.set(key,g);
+  });
+  const rows=[...groups.values()].sort((a,b)=>dName(a.district).localeCompare(dName(b.district))||a.loc.localeCompare(b.loc)||(a.date||"").localeCompare(b.date||""));
+  const tot={}; IMPACT_COLS.forEach(([k])=>tot[k]=rows.reduce((s,r)=>s+r.v[k],0));
+  const mon=d=>{if(!d)return"";const x=new Date(d+"T00:00:00");return isNaN(x)?d:x.toLocaleString("en-US",{month:"long"})};
+  const day=d=>d? String(Number(d.slice(8,10))):"";
+  body.innerHTML=`<div class="view-title">${detail?"Location Detail":"Location Summary"}</div>
+  <div class="meta">${rows.length} location${rows.length>1?"s":""} · ${recs.length} report${recs.length>1?"s":""} · latest ${esc([...recs].map(r=>r.report_reference||(r._savedAt||"").slice(0,10)).sort().pop())}</div>
+  <div class="tbl-wrap"><table><thead><tr><th class="stick">District</th><th>Location</th>${detail?"<th>Month</th><th>Day</th>":""}${IMPACT_COLS.map(([,l])=>`<th class="num">${esc(l)}</th>`).join("")}</tr></thead>
+  <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}</td>${detail?`<td>${esc(mon(r.date))}</td><td class="num">${esc(day(r.date))}</td>`:""}${IMPACT_COLS.map(([k])=>`<td class="num">${fmt(r.v[k])}</td>`).join("")}</tr>`).join("")}</tbody>
+  <tfoot><tr><td class="stick">Total</td><td></td>${detail?"<td></td><td></td>":""}${IMPACT_COLS.map(([k])=>`<td class="num">${fmt(tot[k])}</td>`).join("")}</tr></tfoot></table></div>`;
+}
+
+/* ---------- 4. Response report ---------- */
+function renderResponseReport(){
+  $("#app").innerHTML=dashFrame("response","Response Report",[["village","Village Settlement Summary"],["partners","Partner Mapping"],["orgs","Org Village entries"]]);
+  wireDash("response",drawResponse);
+}
+function drawResponse(){
+  const st=DASH.response; const recs=[...store.response.values()].filter(r=>inFilter(st,r));
+  const body=$("#dBody");
+  const impVill=[...store.impact.values()].filter(r=>inFilter(st,r)&&(r.affected_settlement||"").trim());
+  if(!recs.length && (st.view==="orgs"||!impVill.length)){ body.innerHTML=emptyBox("No response reports for this selection", store.mode==="loading"?"Loading data…":"Rows saved through Flood Response entry for your districts appear here."); return; }
+  const keyOf=r=>r.affected_district+"|"+(r.affected_settlement||"").trim().toLowerCase();
+  const head=(extra)=>`<thead><tr>${extra}${RESP_IND.map(i=>`<th class="num" title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}</tr></thead>`;
+  if(st.view==="orgs"){
+    const rows=[...recs].sort((a,b)=>(a.Reporting_Organisation_Name||"").localeCompare(b.Reporting_Organisation_Name||"")||dName(a.affected_district).localeCompare(dName(b.affected_district))||(a.affected_settlement||"").localeCompare(b.affected_settlement||""));
+    const tot={}; RESP_IND.forEach(([k])=>tot[k]=rows.reduce((s,r)=>s+num(r[k]),0));
+    body.innerHTML=`<div class="view-title">Organization Village Settlement Entries</div><div class="meta">${rows.length} entr${rows.length>1?"ies":"y"} from ${new Set(rows.map(r=>r.Reporting_Organisation_Name)).size} organisation(s)</div>
+    <div class="tbl-wrap"><table>${head(`<th class="stick">Organisation</th><th>District</th><th>Village settlement</th>`)}
+    <tbody>${rows.map(r=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}</tr>`).join("")}</tbody>
+    <tfoot><tr><td class="stick">Total</td><td></td><td></td>${RESP_IND.map(([k])=>`<td class="num">${fmt(tot[k])}</td>`).join("")}</tr></tfoot></table></div>`;
+    return;
+  }
+  const groups=new Map();
+  recs.forEach(r=>{const k=keyOf(r);const g=groups.get(k)||{district:r.affected_district,loc:(r.affected_settlement||"").trim(),v:{},o:{}};
+    g.n=(g.n||0)+1; RESP_IND.forEach(([f])=>{g.v[f]=(g.v[f]||0)+num(r[f]); if(num(r[f])>0){(g.o[f]=g.o[f]||new Set()).add(r.Reporting_Organisation_Name)}}); groups.set(k,g);});
+  impVill.forEach(r=>{const k=keyOf(r); if(!groups.has(k)){const v={};RESP_IND.forEach(([f])=>v[f]=0);groups.set(k,{district:r.affected_district,loc:r.affected_settlement.trim(),v,o:{},n:0});}});
+  const gap=r=>r.n?"":`<br><span class="pill">No response reported</span>`;
+  const nGap=[...groups.values()].filter(g=>!g.n).length;
+  const rows=[...groups.values()].sort((a,b)=>dName(a.district).localeCompare(dName(b.district))||a.loc.localeCompare(b.loc));
+  if(st.view==="partners"){
+    body.innerHTML=`<div class="view-title">Partner Mapping</div><div class="meta">Organisations reporting people reached, by service and village${nGap?` · ${nGap} village${nGap>1?"s":""} with no response reported yet`:""}</div>
+    <div class="tbl-wrap"><table><thead><tr><th class="stick">District</th><th>Village settlement</th>${RESP_IND.map(i=>`<th title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="orgs">${r.o[k]?esc([...r.o[k]].sort().join(", ")):""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    return;
+  }
+  const tot={}; RESP_IND.forEach(([k])=>tot[k]=rows.reduce((s,r)=>s+r.v[k],0));
+  body.innerHTML=`<div class="view-title">Village Settlement Summary</div><div class="meta">${rows.length} village${rows.length>1?"s":""} from impact and response reports · ${recs.length} response entr${recs.length===1?"y":"ies"}${nGap?` · ${nGap} with no response reported yet`:""}</div>
+  <div class="tbl-wrap"><table>${head(`<th class="stick">District</th><th>Village settlement</th>`)}
+  <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(r.v[k])}</td>`).join("")}</tr>`).join("")}</tbody>
+  <tfoot><tr><td class="stick">Total</td><td></td>${RESP_IND.map(([k])=>`<td class="num">${fmt(tot[k])}</td>`).join("")}</tr></tfoot></table></div>`;
+}
+
+/* ---------- start ---------- */
+render();
+</script>
+
+</body>
+</html>
