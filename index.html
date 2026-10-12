@@ -177,6 +177,7 @@ td:nth-child(2){min-width:130px}
 <main id="app"></main>
 <div id="toast" class="toast" hidden></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 const DATA = {"districts":[{"c":"baki","r":"awdal","n":"Baki"},{"c":"borama","r":"awdal","n":"Borama"},{"c":"lughaye","r":"awdal","n":"Lughaye"},{"c":"zeylac","r":"awdal","n":"Zeylac"},{"c":"ceel_barde","r":"bakool","n":"Ceel Barde"},{"c":"rab_dhuure","r":"bakool","n":"Rab Dhuure"},{"c":"tayeeglow","r":"bakool","n":"Tayeeglow"},{"c":"waajid","r":"bakool","n":"Waajid"},{"c":"xudur","r":"bakool","n":"Xudur"},{"c":"abdiaziz","r":"banadir","n":"Abdiaziz"},{"c":"bondhere","r":"banadir","n":"Bondhere"},{"c":"daynile","r":"banadir","n":"Daynile"},{"c":"dharkenley","r":"banadir","n":"Dharkenley"},{"c":"hamar_jajab","r":"banadir","n":"Hamar Jajab"},{"c":"hamar_weyne","r":"banadir","n":"Hamar Weyne"},{"c":"heliwaa","r":"banadir","n":"Heliwaa"},{"c":"hodan","r":"banadir","n":"Hodan"},{"c":"howlwadaag","r":"banadir","n":"Howlwadaag"},{"c":"karaan","r":"banadir","n":"Karaan"},{"c":"kaxda","r":"banadir","n":"Kaxda"},{"c":"shangani","r":"banadir","n":"Shangani"},{"c":"shibis","r":"banadir","n":"Shibis"},{"c":"waaberi","r":"banadir","n":"Waaberi"},{"c":"wadajir","r":"banadir","n":"Wadajir"},{"c":"warta_nabada","r":"banadir","n":"Warta Nabada"},{"c":"yaqshid","r":"banadir","n":"Yaqshid"},{"c":"bandarbeyla","r":"bari","n":"Bandarbeyla"},{"c":"bossaso","r":"bari","n":"Bossaso"},{"c":"caluula","r":"bari","n":"Caluula"},{"c":"iskushuban","r":"bari","n":"Iskushuban"},{"c":"qandala","r":"bari","n":"Qandala"},{"c":"qardho","r":"bari","n":"Qardho"},{"c":"baidoa","r":"bay","n":"Baidoa"},{"c":"berdale","r":"bay","n":"Berdale"},{"c":"buur_hakaba","r":"bay","n":"Buur Hakaba"},{"c":"diinsoor","r":"bay","n":"Diinsoor"},{"c":"qansax_dheere","r":"bay","n":"Qansax Dheere"},{"c":"cabudwaaq","r":"galgaduud","n":"Cabudwaaq"},{"c":"cadaado","r":"galgaduud","n":"Cadaado"},{"c":"ceel_buur","r":"galgaduud","n":"Ceel Buur"},{"c":"ceel_dheer","r":"galgaduud","n":"Ceel Dheer"},{"c":"dhuusamarreeb","r":"galgaduud","n":"Dhuusamarreeb"},{"c":"baardheere","r":"gedo","n":"Baardheere"},{"c":"belet_xaawo","r":"gedo","n":"Belet Xaawo"},{"c":"ceel_waaq","r":"gedo","n":"Ceel Waaq"},{"c":"doolow","r":"gedo","n":"Doolow"},{"c":"garbahaarey","r":"gedo","n":"Garbahaarey"},{"c":"luuq","r":"gedo","n":"Luuq"},{"c":"belet_weyne","r":"hiraan","n":"Belet Weyne"},{"c":"bulo_burto","r":"hiraan","n":"Bulo Burto"},{"c":"jalalaqsi","r":"hiraan","n":"Jalalaqsi"},{"c":"mataban","r":"hiraan","n":"Mataban"},{"c":"maxaas","r":"hiraan","n":"Maxaas"},{"c":"afmadow","r":"lower_juba","n":"Afmadow"},{"c":"badhaadhe","r":"lower_juba","n":"Badhaadhe"},{"c":"jamaame","r":"lower_juba","n":"Jamaame"},{"c":"kismaayo","r":"lower_juba","n":"Kismaayo"},{"c":"afgooye","r":"lower_shabelle","n":"Afgooye"},{"c":"baraawe","r":"lower_shabelle","n":"Baraawe"},{"c":"kurtunwaarey","r":"lower_shabelle","n":"Kurtunwaarey"},{"c":"marka","r":"lower_shabelle","n":"Marka"},{"c":"qoryooley","r":"lower_shabelle","n":"Qoryooley"},{"c":"sablaale","r":"lower_shabelle","n":"Sablaale"},{"c":"wanla_weyn","r":"lower_shabelle","n":"Wanla Weyn"},{"c":"buale","r":"middle_juba","n":"Bu'aale"},{"c":"jilib","r":"middle_juba","n":"Jilib"},{"c":"saakow","r":"middle_juba","n":"Saakow"},{"c":"adan_yabaal","r":"middle_shabelle","n":"Adan Yabaal"},{"c":"balcad","r":"middle_shabelle","n":"Balcad"},{"c":"cadale","r":"middle_shabelle","n":"Cadale"},{"c":"jowhar","r":"middle_shabelle","n":"Jowhar"},{"c":"gaalkacyo","r":"mudug","n":"Gaalkacyo"},{"c":"galdogob","r":"mudug","n":"Galdogob"},{"c":"hobyo","r":"mudug","n":"Hobyo"},{"c":"jariiban","r":"mudug","n":"Jariiban"},{"c":"xarardheere","r":"mudug","n":"Xarardheere"},{"c":"burtinle","r":"nugaal","n":"Burtinle"},{"c":"eyl","r":"nugaal","n":"Eyl"},{"c":"garowe","r":"nugaal","n":"Garowe"},{"c":"ceel_afweyn","r":"sanaag","n":"Ceel Afweyn"},{"c":"ceerigaabo","r":"sanaag","n":"Ceerigaabo"},{"c":"laasqoray","r":"sanaag","n":"Laasqoray"},{"c":"caynabo","r":"sool","n":"Caynabo"},{"c":"laas_caanood","r":"sool","n":"Laas Caanood"},{"c":"taleex","r":"sool","n":"Taleex"},{"c":"xudun","r":"sool","n":"Xudun"},{"c":"burao","r":"togdheer","n":"Burao"},{"c":"buuhoodle","r":"togdheer","n":"Buuhoodle"},{"c":"oodweyne","r":"togdheer","n":"Oodweyne"},{"c":"sheikh","r":"togdheer","n":"Sheikh"},{"c":"berbera","r":"woqooyi_galbeed","n":"Berbera"},{"c":"gebiley","r":"woqooyi_galbeed","n":"Gebiley"},{"c":"hargeysa","r":"woqooyi_galbeed","n":"Hargeysa"}]};
 const API_URL = String(window.FLOOD_API_URL||"").trim();
@@ -652,6 +653,7 @@ function renderDaily(kind){
      <div class="f"><label for="yReg">Region</label><select id="yReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
      <div class="f"><label for="yDist">District</label><select id="yDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
      <button class="btn" type="button" id="yReset">Clear filters</button>
+     <button class="btn primary" type="button" id="yExport" disabled>Export to Excel</button>
    </div>
    <div class="chiprow"><span class="chiplab">Month</span>${chip("m","","All months",!st.month)}${months.map(m=>chip("m",m,mLabel(m),st.month===m)).join("")}</div>
    <div class="chiprow"><span class="chiplab">Day</span>${chip("dd","","All days",!st.day)}${days.map(d=>chip("dd",d,String(Number(d)),st.day===d)).join("")}</div>
@@ -676,6 +678,32 @@ function renderDaily(kind){
   <tbody>${dists.map(d=>{const rs=byD.get(d).sort((a,b)=>b._date.localeCompare(a._date)||(a.affected_settlement||"").localeCompare(b.affected_settlement||""));
     return rs.map(r=>`<tr>${cols.map((c,i)=>c[2]==="n"?`<td class="num">${fmt(num(r[c[0]]))}</td>`:`<td class="${i===0?"stick":""}" title="${esc(cellVal(c,r))}">${esc(cellVal(c,r))}</td>`).join("")}</tr>`).join("")+totalRow("subtotal","Subtotal · "+dName(d)+" ("+rs.length+")",rs);}).join("")}</tbody>
   <tfoot>${totalRow("","Grand total ("+recs.length+")",recs)}</tfoot></table></div>`;
+  const ex=$("#yExport"); ex.disabled=false;
+  ex.onclick=async()=>{
+    const aoa=[cols.map(c=>c[1])];
+    const tot=(lab,rs)=>cols.map((c,i)=>i===0?lab:(c[2]==="n"?sum(rs,c[0]):""));
+    dists.forEach(d=>{ const rs=byD.get(d); rs.forEach(r=>aoa.push(cols.map(c=>c[2]==="n"?(r[c[0]]==null||r[c[0]]===""?null:num(r[c[0]])):cellVal(c,r)))); aoa.push(tot("Subtotal - "+dName(d)+" ("+rs.length+")",rs)); });
+    aoa.push(tot("Grand total ("+recs.length+")",recs));
+    const about=[["El Niño - "+title],["Filters",sel],["Records",recs.length],["Districts",dists.length],["Exported",new Date().toLocaleString("en-GB")],["Code",S.pin],[],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
+    const stamp=new Date().toISOString().slice(0,10);
+    const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
+    await exportXlsx(`El_Nino_${kind==="impact"?"Daily_Impact":"Daily_Response"}_Report${part?"_"+part:""}_${stamp}.xlsx`, kind==="impact"?"Daily impact":"Daily response", aoa, about);
+  };
+}
+async function exportXlsx(filename,sheetName,aoa,about){
+  if(!window.XLSX){ toast("The Excel exporter didn't load. Check your connection and reload the page."); return; }
+  const ws=XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"]=aoa[0].map((h,i)=>({wch:Math.min(45,Math.max(10,String(h).length+2,...aoa.slice(1,200).map(r=>String(r[i]??"").length+1)))}));
+  ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:aoa[0].length-1}})};
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,sheetName);
+  const ab=XLSX.utils.aoa_to_sheet(about); ab["!cols"]=[{wch:14},{wch:60}]; XLSX.utils.book_append_sheet(wb,ab,"About");
+  let dl=null; try{ dl=window.claude?.use? await window.claude.use("downloads") : null; }catch(e){ dl=null; }
+  if(dl){
+    try{ const buf=XLSX.write(wb,{bookType:"xlsx",type:"array"}); await dl.save({filename,data:new Blob([buf])}); toast("Exported "+filename); }
+    catch(e){ if(e?.code!=="declined") toast("Couldn't export: "+(e?.message||e?.code||e)); }
+    return;
+  }
+  try{ XLSX.writeFile(wb,filename); toast("Exported "+filename); }catch(e){ toast("Couldn't export: "+(e?.message||e)); }
 }
 
 /* ---------- 3. Impact report ---------- */
