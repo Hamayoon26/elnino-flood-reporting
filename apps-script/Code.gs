@@ -7,6 +7,7 @@
  *
  * The PIN codes live only in the "Codes" tab of your sheet, never in the public page.
  * Every request is checked here: a code only reads and writes data for its own districts.
+ * Code types: IM (impact entry), RM (response entry), VIEW (reports only), ALL (super code: everything, incl. delete).
  */
 
 const IMPACT_FIELDS = ['id','_savedAt','_createdAt','_pin','reporting_organisation','abc_role','crisis_type','crisis_onset',
@@ -40,7 +41,7 @@ function setup() {
   if (!ss) throw new Error('This script is not attached to a Google Sheet. Open your Sheet, go to Extensions > Apps Script, and paste the code there.');
   const codes = ss.getSheetByName('Codes') || ss.insertSheet('Codes');
   if (codes.getLastRow() === 0) {
-    codes.getRange(1, 1, 1, 4).setValues([['Code', 'Type (IM, RM or ALL)', 'Districts (Kobo codes, comma separated)', 'District names (for reference)']]);
+    codes.getRange(1, 1, 1, 4).setValues([['Code', 'Type (IM, RM, ALL or VIEW)', 'Districts (Kobo codes, comma separated)', 'District names (for reference)']]);
     codes.setFrozenRows(1);
   }
   Object.keys(COLL).forEach(function (k) {
@@ -97,7 +98,9 @@ function auth(pin) {
   rows.forEach(function (r) {
     if (String(r[0]).trim().toUpperCase() !== pin) return;
     const t = String(r[1]).trim().toUpperCase();
-    if (t === 'ALL') { types.add('IM'); types.add('RM'); } else if (t) types.add(t);
+    if (t === 'ALL') { types.add('IM'); types.add('RM'); types.add('SUPER'); }
+    else if (t === 'VIEW') types.add('VIEW');
+    else if (t) types.add(t);
     String(r[2]).split(',').forEach(function (d) { d = d.trim().toLowerCase(); if (d) districts.add(d); });
   });
   if (!types.size) return null;
@@ -175,7 +178,7 @@ function save(coll, rec, who, pin) {
 
 function remove(coll, id, who) {
   const t = sheetFor(coll);
-  if (who.types.indexOf(t.c.needs) < 0) return { ok: false, error: 'not_allowed' };
+  if (who.types.indexOf('SUPER') < 0) return { ok: false, error: 'not_allowed' };
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) return { ok: false, error: 'busy' };
   try {

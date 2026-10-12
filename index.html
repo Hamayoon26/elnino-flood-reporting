@@ -145,6 +145,13 @@ tbody tr:nth-child(even) td.stick{background:color-mix(in srgb,var(--sunk) 45%,v
 .meta{font-size:13px;color:var(--muted);margin-bottom:8px}
 .empty{padding:36px 20px;text-align:center;color:var(--muted)}
 .empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.chiplab{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;min-width:52px}
+.chipbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer}
+.chipbtn:hover{border-color:var(--flood)}
+.chipbtn[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+table.daily td{white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+tr.subtotal td{background:var(--flood-soft)!important;font-weight:600;border-bottom:2px solid var(--line)}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -257,7 +264,9 @@ const S={pin:null,types:new Set(),districts:new Set(),view:"pin",dirty:false};
 const allowed=c=>S.districts.has(c);
 const myRegions=()=>[...new Set([...S.districts].map(c=>DIST[c]?.r).filter(Boolean))].sort((a,b)=>rName(a).localeCompare(rName(b)));
 const myDistricts=r=>[...S.districts].filter(c=>!r||DIST[c]?.r===r).sort((a,b)=>dName(a).localeCompare(dName(b)));
-const canDo={impactEntry:()=>S.types.has("IM"),responseReport:()=>S.types.has("IM"),responseEntry:()=>S.types.has("RM"),impactReport:()=>S.types.has("RM")};
+const isSuper=()=>S.types.has("SUPER");
+const canDo={impactEntry:()=>S.types.has("IM"),responseReport:()=>S.types.has("IM")||S.types.has("VIEW"),responseEntry:()=>S.types.has("RM"),impactReport:()=>S.types.has("RM")||S.types.has("VIEW"),
+  dailyImpact:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyResponse:()=>S.types.has("SUPER")||S.types.has("VIEW")};
 
 function go(view){
   if(S.dirty && view!==S.view && !go.force){ pendingLeave(view); return; }
@@ -268,7 +277,7 @@ function pendingLeave(view){
   host.hidden=false; host.innerHTML=`<div class="msg bad">You have unsaved changes. <button class="btn sm" id="lvYes" type="button">Leave without saving</button> <button class="btn sm ghost" id="lvNo" type="button">Stay</button></div>`;
   $("#lvYes").onclick=()=>{go.force=true;go(view)}; $("#lvNo").onclick=()=>{host.hidden=true};
 }
-function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
+function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="dailyImpact"||S.view==="dailyResponse"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
 
 $("#goHome").onclick=()=>go("home");
 $("#lock").onclick=()=>{ go.force=true; stopSync(); S.pin=null; S.types=new Set(); S.districts=new Set(); go("pin"); };
@@ -281,7 +290,7 @@ function render(){
     $("#who").innerHTML=`Code <b>${esc(S.pin)}</b> · ${n>6? n+" districts" : esc(list.join(", "))}`;
   }
   if(S.view!=="pin" && (!S.pin || (canDo[S.view] && !canDo[S.view]()))) S.view = S.pin? "home":"pin";
-  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport})[S.view]();
+  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response")})[S.view]();
 }
 
 /* ---------- PIN page ---------- */
@@ -312,15 +321,17 @@ function renderHome(){
     ["impactEntry","1","Flood Impact entry","Record the first picture of flood impact for one settlement or site at a time.","impact"],
     ["responseEntry","2","Flood Response entry","Report people reached by sector against each affected village, in one table.","response"],
     ["impactReport","3","Flood Impact Report","Location summary and detail of reported impact for your districts.","impact"],
-    ["responseReport","4","Flood Response Report","Village summary, partner mapping and organisation entries.","response"]];
-  const typeTxt = S.types.has("IM")&&S.types.has("RM") ? "Coordination code (all functions)" : S.types.has("IM") ? "IMPACT Kobo and Response Power BI code" : "Response Kobo and IMPACT Power BI code";
+    ["responseReport","4","Flood Response Report","Village summary, partner mapping and organisation entries.","response"],
+    ["dailyImpact","5","Daily Impact Report","Every impact record by region, district, month and day, with district subtotals.","impact"],
+    ["dailyResponse","6","Daily Response Report","Every response entry by region, district, month and day, with district subtotals.","response"]];
+  const typeTxt = isSuper() ? "Super code (all functions and data)" : S.types.has("VIEW") ? "Reporting code (reports only)" : S.types.has("IM")&&S.types.has("RM") ? "Coordination code (all functions)" : S.types.has("IM") ? "IMPACT Kobo and Response Power BI code" : "Response Kobo and IMPACT Power BI code";
   const rows=[...S.districts].map(c=>`<span class="chip">${esc(dName(c))} · ${esc(rName(DIST[c]?.r))}</span>`).join("");
   $("#app").innerHTML=`<div class="wrap">
     <div class="home-head"><div class="eyebrow">${esc(typeTxt)}</div><h1>What would you like to do?</h1>
     <div class="chips">${S.districts.size>12? `<span class="chip">All ${S.districts.size} districts</span>`: rows}</div></div>
     <div class="tiles">${t.map(([v,n,h,p,k])=>{const ok=canDo[v]();return `<button type="button" class="tile ${k}" data-go="${v}" ${ok?"":"disabled"} aria-disabled="${!ok}">
       <span class="n">${n}</span><h2>${h}</h2><p>${p}</p><span class="state">${ok?"Available":"Not available with this code"}</span></button>`}).join("")}</div>
-    <p class="note">Codes starting IM open Flood Impact entry and the Flood Response Report. Codes starting RM open Flood Response entry and the Flood Impact Report. Data shown everywhere is limited to the districts linked to your code.</p>
+    <p class="note">Codes starting IM open Flood Impact entry and the Flood Response Report. Codes starting RM open Flood Response entry and the Flood Impact Report. Daily reports are open to coordination codes only. Data shown everywhere is limited to the districts linked to your code.</p>
   </div>`;
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ if(!b.disabled) go(b.dataset.go) });
 }
@@ -448,7 +459,7 @@ function renderImpactList(){
   if(!rows.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No impact records yet</b>Records you submit above for your districts will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
   host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th>Reference date</th><th>District</th><th>Settlement / site</th><th>Organisation</th><th class="num">Affected</th><th class="num">Deaths</th><th>Status</th><th></th></tr></thead><tbody>
   ${rows.map(([id,r])=>`<tr><td>${esc(r.report_reference||(r._savedAt||"").slice(0,10))}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.reporting_organisation)}</td><td class="num">${fmt(num(r.people_affected))}</td><td class="num">${fmt(num(r.deaths))}</td><td>${esc(label(EVENT,r.event_status))}</td>
-  <td style="white-space:nowrap"><button class="btn sm" type="button" data-edit="${id}">Edit</button> <span data-delbox="${id}"><button class="btn sm ghost" type="button" data-del="${id}">Delete</button></span></td></tr>`).join("")}</tbody></table></div>`;
+  <td style="white-space:nowrap"><button class="btn sm" type="button" data-edit="${id}">Edit</button>${isSuper()?` <span data-delbox="${id}"><button class="btn sm ghost" type="button" data-del="${id}">Delete</button></span>`:""}</td></tr>`).join("")}</tbody></table></div>`;
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>loadImpactIntoForm(b.dataset.edit));
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const box=host.querySelector(`[data-delbox="${b.dataset.del}"]`);box.innerHTML=`<span class="confirm">Delete? <button class="btn sm danger" type="button">Yes</button><button class="btn sm ghost" type="button">No</button></span>`;const [y,n]=box.querySelectorAll("button");y.onclick=async()=>{try{await deleteDoc("impact",b.dataset.del);toast("Record deleted");renderImpactList()}catch(e){toast("Couldn't delete: "+(e.message||e.code))}};n.onclick=renderImpactList;});
 }
@@ -487,7 +498,7 @@ function renderResponseEntry(){
    <div id="respMsg" class="msg" hidden></div>
    <div class="actions"><button class="btn primary" type="button" id="respSave">Submit</button><span class="meta" id="dirtyCount"></span></div>
    <h2 style="margin:34px 0 6px;font-size:22px">Submitted responses</h2>
-   <div class="meta">All organisations' submissions for your districts. Use Edit to load an entry back into the table.</div>
+   <div class="meta">All organisations' submissions for your districts.</div>
    <div id="respList"></div>
   </div>`;
   const tb=$("#respTbl tbody");
@@ -508,9 +519,9 @@ function renderRespList(){
     .sort((a,b)=>(b[1]._savedAt||"").localeCompare(a[1]._savedAt||""));
   if(!recs.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No submissions yet</b>Rows submitted from the table above will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
   const when=t=>{if(!t)return"";const d=new Date(t);return isNaN(d)?t:d.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})};
-  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th class="stick">Organisation</th><th>District</th><th>Village / settlement</th><th>Update date</th><th>Status</th><th class="num">TOTAL people</th>${RESP_IND.map(i=>`<th class="num" title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}<th>Other</th><th class="num">Other people</th><th>Start</th><th>Completion</th><th>Note</th><th>Submitted</th><th></th></tr></thead><tbody>
-  ${recs.map(([id,r])=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.report_date)}</td><td>${esc(label(RESP_STATUS,r.response_status))}</td><td class="num">${fmt(num(r.TOTAL_Number_of_People))}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}<td>${esc(r._Response_Type_Other)}</td><td class="num">${fmt(num(r.Response_Type_Other_People_Reached))}</td><td>${esc(r.actual_start)}</td><td>${esc(r.actual_completion)}</td><td>${esc(r.remarks)}</td><td style="white-space:nowrap">${esc(when(r._savedAt))}</td>
-  <td style="white-space:nowrap"><button class="btn sm" type="button" data-redit="${esc(id)}">Edit</button> <span data-rdelbox="${esc(id)}"><button class="btn sm ghost" type="button" data-rdel="${esc(id)}">Delete</button></span></td></tr>`).join("")}</tbody></table></div>`;
+  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th class="stick">Organisation</th><th>District</th><th>Village / settlement</th><th>Update date</th><th>Status</th><th class="num">TOTAL people</th>${RESP_IND.map(i=>`<th class="num" title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}<th>Other</th><th class="num">Other people</th><th>Start</th><th>Completion</th><th>Note</th><th>Submitted</th>${isSuper()?"<th></th>":""}</tr></thead><tbody>
+  ${recs.map(([id,r])=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.report_date)}</td><td>${esc(label(RESP_STATUS,r.response_status))}</td><td class="num">${fmt(num(r.TOTAL_Number_of_People))}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}<td>${esc(r._Response_Type_Other)}</td><td class="num">${fmt(num(r.Response_Type_Other_People_Reached))}</td><td>${esc(r.actual_start)}</td><td>${esc(r.actual_completion)}</td><td>${esc(r.remarks)}</td><td style="white-space:nowrap">${esc(when(r._savedAt))}</td>${isSuper()?`
+  <td style="white-space:nowrap"><button class="btn sm" type="button" data-redit="${esc(id)}">Edit</button> <span data-rdelbox="${esc(id)}"><button class="btn sm ghost" type="button" data-rdel="${esc(id)}">Delete</button></span></td>`:""}</tr>`).join("")}</tbody></table></div>`;
   host.querySelectorAll("[data-redit]").forEach(b=>b.onclick=()=>{
     const r=store.response.get(b.dataset.redit); if(!r) return;
     if(S.dirty){ toast("Submit or clear your unsaved rows first"); return; }
@@ -596,6 +607,76 @@ function wireDash(kind,draw){
 }
 const inFilter=(st,rec)=>allowed(rec.affected_district)&&(!st.region||rec.affected_region===st.region||DIST[rec.affected_district]?.r===st.region)&&(!st.district||rec.affected_district===st.district);
 const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}</div></div>`;
+
+/* ---------- 5/6. Daily reports ---------- */
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAILY={impact:{region:"",district:"",month:"",day:""},response:{region:"",district:"",month:"",day:""}};
+const DAILY_COLS={
+  impact:[["_date","Reference date"],["affected_region","Region","r"],["affected_district","District","d"],["affected_settlement","Settlement / site"],["reporting_organisation","Reporting organisation"],
+    ["abc_role","ABC role",ABC_ROLE],["crisis_type","Crisis type",CRISIS],["crisis_onset","Crisis onset"],["event_status","Event status",EVENT],["event_summary","Event summary"],["location_type","Type of location",LOCTYPE],
+    ["_gps","GPS"],["location_reference_note","Location reference"],
+    ...IMPACT_NUM.map(([k,l])=>{const t=l.replace(/^Number of /,"").replace(/^Amount of /,"");return [k,t.charAt(0).toUpperCase()+t.slice(1),"n"]}),
+    ["access_status","Access status",ACCESS],["reported_access_constraints","Access constraints",CONSTR],["reported_access_note","Access note"],
+    ["main_source","Main source",SOURCE],["human_source_reference","Source reference"],["_savedAt","Submitted"]],
+  response:[["_date","Update date"],["affected_region","Region","r"],["affected_district","District","d"],["affected_settlement","Village / settlement"],["Reporting_Organisation_Name","Organisation"],
+    ["response_status","Response status",RESP_STATUS],["TOTAL_Number_of_People","TOTAL people supported","n"],
+    ...RESP_IND.map(([k,l])=>[k,l,"n"]),["_Response_Type_Other","Response type - other"],["Response_Type_Other_People_Reached","Other - people reached","n"],
+    ["actual_start","Actual start"],["actual_completion","Actual completion"],["remarks","Update note"],["confirm_accuracy","Confirmed",[["yes","Yes"],["no","No"]]],["_savedAt","Submitted"]]};
+const recDate=(kind,r)=>(kind==="impact"? (r.report_reference||"") : (r.report_date||"")) || (r._savedAt||"").slice(0,10);
+function cellVal(c,r){
+  const [k,,t]=c;
+  if(k==="_gps") return (r.geo_lat||r.geo_lon)? `${r.geo_lat||""}, ${r.geo_lon||""}` : "";
+  if(k==="_savedAt"){ const d=new Date(r._savedAt); return isNaN(d)?"":d.toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+  const v=r[k];
+  if(t==="r") return rName(v||DIST[r.affected_district]?.r);
+  if(t==="d") return dName(v);
+  if(Array.isArray(t)) return Array.isArray(v)? v.map(x=>label(t,x)).join(", ") : label(t,v);
+  if(Array.isArray(v)) return v.join(", ");
+  return v==null?"":String(v);
+}
+function renderDaily(kind){
+  const st=DAILY[kind]; const regs=myRegions();
+  const all=[...store[kind].values()].filter(r=>allowed(r.affected_district)).map(r=>({...r,_date:recDate(kind,r)}));
+  const inRD=r=>(!st.region||(r.affected_region||DIST[r.affected_district]?.r)===st.region)&&(!st.district||r.affected_district===st.district);
+  const months=[...new Set(all.filter(inRD).map(r=>r._date.slice(0,7)).filter(Boolean))].sort().reverse();
+  if(st.month&&!months.includes(st.month)) st.month="";
+  const days=[...new Set(all.filter(r=>inRD(r)&&(!st.month||r._date.startsWith(st.month))).map(r=>r._date.slice(8,10)).filter(Boolean))].sort();
+  if(st.day&&!days.includes(st.day)) st.day="";
+  const mLabel=m=>{const [y,mm]=m.split("-");return `${MONTHS[Number(mm)-1]||mm} ${y}`};
+  const chip=(grp,val,lab,on)=>`<button type="button" class="chipbtn" data-${grp}="${esc(val)}" aria-pressed="${on}">${esc(lab)}</button>`;
+  const title=kind==="impact"?"Daily Impact Report":"Daily Response Report";
+  $("#app").innerHTML=`<div class="wrap">
+   <div class="dash-head"><div><div class="eyebrow">${kind==="impact"?"5":"6"} · ${title}</div><h1><span class="draft">DRAFT</span> - El Niño - ${title}</h1></div>
+   <div class="disclaimer"><b>Disclaimer</b>: The information presented is preliminary and remains subject to verification and updates as new information becomes available. For official datasets or validated figures, please contact the relevant ABC or OCHA office.</div></div>
+   <div class="toolbar">
+     <div class="f"><label for="yReg">Region</label><select id="yReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
+     <div class="f"><label for="yDist">District</label><select id="yDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
+     <button class="btn" type="button" id="yReset">Clear filters</button>
+   </div>
+   <div class="chiprow"><span class="chiplab">Month</span>${chip("m","","All months",!st.month)}${months.map(m=>chip("m",m,mLabel(m),st.month===m)).join("")}</div>
+   <div class="chiprow"><span class="chiplab">Day</span>${chip("dd","","All days",!st.day)}${days.map(d=>chip("dd",d,String(Number(d)),st.day===d)).join("")}</div>
+   <div id="yBody"></div></div>`;
+  $("#yReg").onchange=e=>{st.region=e.target.value;st.district="";render()};
+  $("#yDist").onchange=e=>{st.district=e.target.value;render()};
+  $("#yReset").onclick=()=>{Object.assign(st,{region:"",district:"",month:"",day:""});if(typeof loadData==="function")loadData();render()};
+  document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{st.month=b.dataset.m;st.day="";render()});
+  document.querySelectorAll("[data-dd]").forEach(b=>b.onclick=()=>{st.day=b.dataset.dd;render()});
+  const recs=all.filter(r=>inRD(r)&&(!st.month||r._date.startsWith(st.month))&&(!st.day||r._date.slice(8,10)===st.day));
+  const body=$("#yBody");
+  if(!recs.length){ body.innerHTML=emptyBox("No records for this selection", store.mode==="loading"?"Loading data…":"Try another region, district, month or day."); return; }
+  const cols=DAILY_COLS[kind];
+  const byD=new Map(); recs.forEach(r=>{const k=r.affected_district; if(!byD.has(k)) byD.set(k,[]); byD.get(k).push(r)});
+  const dists=[...byD.keys()].sort((a,b)=>dName(a).localeCompare(dName(b)));
+  const sum=(rs,k)=>rs.reduce((s,r)=>s+num(r[k]),0);
+  const firstNum=cols.findIndex(c=>c[2]==="n");
+  const totalRow=(cls,lab,rs)=>`<tr class="${cls}"><td class="stick" colspan="${firstNum}">${esc(lab)}</td>${cols.slice(firstNum).map(c=>c[2]==="n"?`<td class="num">${fmt(sum(rs,c[0]))}</td>`:"<td></td>").join("")}</tr>`;
+  const sel=[st.region&&rName(st.region),st.district&&dName(st.district),st.month&&mLabel(st.month),st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
+  body.innerHTML=`<div class="meta">${esc(sel)} · ${recs.length} record${recs.length>1?"s":""} in ${dists.length} district${dists.length>1?"s":""}</div>
+  <div class="tbl-wrap"><table class="daily"><thead><tr>${cols.map((c,i)=>`<th class="${i===0?"stick ":""}${c[2]==="n"?"num":""}">${esc(c[1])}</th>`).join("")}</tr></thead>
+  <tbody>${dists.map(d=>{const rs=byD.get(d).sort((a,b)=>b._date.localeCompare(a._date)||(a.affected_settlement||"").localeCompare(b.affected_settlement||""));
+    return rs.map(r=>`<tr>${cols.map((c,i)=>c[2]==="n"?`<td class="num">${fmt(num(r[c[0]]))}</td>`:`<td class="${i===0?"stick":""}" title="${esc(cellVal(c,r))}">${esc(cellVal(c,r))}</td>`).join("")}</tr>`).join("")+totalRow("subtotal","Subtotal · "+dName(d)+" ("+rs.length+")",rs);}).join("")}</tbody>
+  <tfoot>${totalRow("","Grand total ("+recs.length+")",recs)}</tfoot></table></div>`;
+}
 
 /* ---------- 3. Impact report ---------- */
 function renderImpactReport(){

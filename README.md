@@ -7,7 +7,19 @@ A web app for Area-Based Coordination forums in Somalia. People enter a district
 3. **Flood Impact Report**: Location Summary and Location Detail
 4. **Flood Response Report**: Village Settlement Summary, Partner Mapping and Org Village entries
 
-IM codes open buttons 1 and 4. RM codes open buttons 2 and 3. An ALL code opens everything. Every code only sees and changes data for its own districts.
+5. **Daily Impact Report**: every impact record, filtered by region, district, month and day, with a subtotal per district
+6. **Daily Response Report**: the same for response entries
+
+Code types (column B of the `Codes` tab):
+
+| Type | Opens | Notes |
+|---|---|---|
+| `IM` | 1 Flood Impact entry, 4 Flood Response Report | Can edit impact records, cannot delete |
+| `RM` | 2 Flood Response entry, 3 Flood Impact Report | Cannot edit or delete from the submitted list |
+| `VIEW` | 3, 4, 5, 6 (reports only) | Cannot enter or change data |
+| `ALL` | Everything, 1 to 6 | Super code: the only type that can delete, and edit from the submitted responses list |
+
+Every code only sees and changes data for its own districts.
 
 ## How it fits together
 
@@ -28,7 +40,7 @@ IM codes open buttons 1 and 4. RM codes open buttons 2 and 3. An ALL code opens 
 
 1. Open the `Codes` tab.
 2. Paste in the rows from `codes-PRIVATE.csv`, which is sent separately and is **not** in this repository. Alternatively, use **File → Import → Upload**, choose "Replace current sheet", and make sure the tab is still named `Codes`.
-3. Columns are: Code, Type (`IM`, `RM` or `ALL`), District Kobo codes separated by commas, and district names for reference. Edit this tab any time to add, change or remove codes. Changes apply straight away.
+3. Columns are: Code, Type (`IM`, `RM`, `VIEW` or `ALL`), District Kobo codes separated by commas, and district names for reference. Edit this tab any time to add, change or remove codes. Changes apply straight away.
 
 ### 3. Deploy the script as a web app
 
