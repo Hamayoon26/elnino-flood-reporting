@@ -54,6 +54,8 @@ button,input,select,textarea{font:inherit;color:inherit}
 .pin-card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px 24px;display:grid;gap:16px}
 .pin-card h1{font-size:28px}
 .pin-card p{margin:0;color:var(--muted)}
+.showpin{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer;justify-self:start}
+.showpin input{accent-color:var(--flood)}
 .pin-input{font-family:var(--mono);font-size:26px;letter-spacing:.18em;text-align:center;text-transform:uppercase;padding:12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);width:100%}
 .msg{font-size:14px;padding:8px 12px;border-radius:var(--r)}
 .msg.bad{background:var(--bad-soft);color:var(--bad)}
@@ -263,6 +265,7 @@ function showBanner(t){const b=$("#banner");b.textContent=t;b.hidden=false}
 /* ---------- session ---------- */
 const S={pin:null,types:new Set(),districts:new Set(),view:"pin",dirty:false};
 const allowed=c=>S.districts.has(c);
+const masked=()=>"*".repeat(Math.max(5,(S.pin||"").length));
 const myRegions=()=>[...new Set([...S.districts].map(c=>DIST[c]?.r).filter(Boolean))].sort((a,b)=>rName(a).localeCompare(rName(b)));
 const myDistricts=r=>[...S.districts].filter(c=>!r||DIST[c]?.r===r).sort((a,b)=>dName(a).localeCompare(dName(b)));
 const isSuper=()=>S.types.has("SUPER");
@@ -288,7 +291,7 @@ function render(){
   if(S.pin){
     const n=S.districts.size;
     const list=[...S.districts].map(dName).sort();
-    $("#who").innerHTML=`Code <b>${esc(S.pin)}</b> · ${n>6? n+" districts" : esc(list.join(", "))}`;
+    $("#who").innerHTML=`Code <b aria-label="hidden code">${masked()}</b> · ${n>6? n+" districts" : esc(list.join(", "))}`;
   }
   if(S.view!=="pin" && (!S.pin || (canDo[S.view] && !canDo[S.view]()))) S.view = S.pin? "home":"pin";
   ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response")})[S.view]();
@@ -300,10 +303,12 @@ function renderPin(){
     <div class="eyebrow">Area-Based Coordination · Somalia</div>
     <h1>Enter your district code</h1>
     <p>Use the code shared with your ABC forum. It opens the forms and reports for your districts only.</p>
-    <input class="pin-input" id="pinIn" inputmode="text" maxlength="12" placeholder="IM00000" aria-label="District code" autofocus>
+    <input class="pin-input" id="pinIn" type="password" inputmode="text" maxlength="12" placeholder="*******" aria-label="District code" autocomplete="off" autocapitalize="characters" spellcheck="false" autofocus>
+    <label class="showpin"><input type="checkbox" id="pinShow"> Show code</label>
     <div id="pinMsg" class="msg bad" hidden></div>
     <button class="btn primary" type="submit">Unlock</button>
   </form></section>`;
+  $("#pinShow").onchange=e=>{$("#pinIn").type=e.target.checked?"text":"password";$("#pinIn").focus()};
   $("#pinForm").onsubmit=async e=>{
     e.preventDefault();
     const v=$("#pinIn").value.trim().toUpperCase(); const m=$("#pinMsg"); const btn=$("#pinForm button");
@@ -485,7 +490,7 @@ function renderResponseEntry(){
    <div id="leaveBox" hidden></div>
    <fieldset><legend>Response Report</legend><div class="grid2">
      <div class="f"><label class="req" for="org">Reporting Organisation Name</label><input type="text" id="org" list="orgList" value="${esc(respOrg)}" placeholder="Your organisation"><datalist id="orgList">${orgs.map(o=>`<option value="${esc(o)}">`).join("")}</datalist><span class="hint">Your organisation's earlier entries load into the table when you enter its name.</span></div>
-     <div class="f"><label for="rfc">Response Form Code</label><input type="text" id="rfc" value="${esc(S.pin)}" readonly></div>
+     <div class="f"><label for="rfc">Response Form Code</label><input type="text" id="rfc" value="${masked()}" readonly aria-label="Response Form Code (hidden)"></div>
      <div class="f"><label for="fDist">Show district</label><select id="fDist"><option value="">All my districts</option>${myDistricts().map(c=>`<option value="${c}">${esc(dName(c))}</option>`).join("")}</select></div>
      <div class="f"><label for="fSearch">Find village or site</label><input type="text" id="fSearch" placeholder="Type to filter"></div>
    </div></fieldset>
@@ -684,7 +689,7 @@ function renderDaily(kind){
     const tot=(lab,rs)=>cols.map((c,i)=>i===0?lab:(c[2]==="n"?sum(rs,c[0]):""));
     dists.forEach(d=>{ const rs=byD.get(d); rs.forEach(r=>aoa.push(cols.map(c=>c[2]==="n"?(r[c[0]]==null||r[c[0]]===""?null:num(r[c[0]])):cellVal(c,r)))); aoa.push(tot("Subtotal - "+dName(d)+" ("+rs.length+")",rs)); });
     aoa.push(tot("Grand total ("+recs.length+")",recs));
-    const about=[["El Niño - "+title],["Filters",sel],["Records",recs.length],["Districts",dists.length],["Exported",new Date().toLocaleString("en-GB")],["Code",S.pin],[],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
+    const about=[["El Niño - "+title],["Filters",sel],["Records",recs.length],["Districts",dists.length],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
     const stamp=new Date().toISOString().slice(0,10);
     const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
     await exportXlsx(`El_Nino_${kind==="impact"?"Daily_Impact":"Daily_Response"}_Report${part?"_"+part:""}_${stamp}.xlsx`, kind==="impact"?"Daily impact":"Daily response", aoa, about);
