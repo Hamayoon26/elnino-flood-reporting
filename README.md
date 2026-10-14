@@ -2,25 +2,25 @@
 
 A web app for Area-Based Coordination forums in Somalia. People enter a district code, then can:
 
-1. **Flood Impact entry**: the El Niño Impact Reporting Form, one settlement or site per record
-2. **Flood Response entry**: a table of affected villages where partners report people reached by sector
-3. **Flood Impact Report**: Location Summary and Location Detail
-4. **Flood Response Report**: Village Settlement Summary, Partner Mapping and Org Village entries
+1. **Daily Qualitative Information entry**: a short daily narrative per district (organisation, ABC role, when the crisis began, event status, region, district, description), saved to the `Qualitative` tab
+2. **Flood Impact entry**: the El Niño Impact Reporting Form, one settlement or site per record
+3. **Flood Response entry**: a table of affected villages where partners report people reached by sector
+4. **Flood Impact Report**: Location Summary and Location Detail
+5. **Flood Response Report**: Village Settlement Summary, Partner Mapping and Org Village entries
+6. **Daily Impact Report**: every impact record, filtered by region, district, month and day, with a subtotal per district
+7. **Daily Response Report**: the same for response entries
+8. **Daily Qualitative Report**: every qualitative entry, filtered by region, district, month and day
 
-5. **Daily Impact Report**: every impact record, filtered by region, district, month and day, with a subtotal per district
-6. **Daily Response Report**: the same for response entries
-7. **Daily Qualitative Information entry**: a short daily narrative per district (organisation, ABC role, when the crisis began, event status, region, district, description), saved to the `Qualitative` tab
-
-The Flood Impact Report and Flood Response Report also have Month and Day filters and an Export to Excel button.
+All five reports have Month and Day filters and an Export to Excel button.
 
 Code types (column B of the `Codes` tab):
 
 | Type | Opens | Notes |
 |---|---|---|
-| `IM` | 1 Flood Impact entry, 4 Flood Response Report, 7 Daily Qualitative entry | Can edit impact and qualitative records, cannot delete |
-| `RM` | 2 Flood Response entry, 3 Flood Impact Report | Cannot edit or delete from the submitted list |
-| `VIEW` | 3, 4, 5, 6 (reports only) | Cannot enter or change data |
-| `ALL` | Everything, 1 to 7 | Super code: the only type that can delete, and edit from the submitted responses list |
+| `IM` | 1 Daily Qualitative entry, 2 Flood Impact entry, 5 Flood Response Report | Can edit impact and qualitative records, cannot delete |
+| `RM` | 3 Flood Response entry, 4 Flood Impact Report | Cannot edit or delete from the submitted list |
+| `VIEW` | 4 to 8 (reports only) | Cannot enter or change data |
+| `ALL` | Everything, 1 to 8 | Super code: the only type that can delete, and edit from the submitted responses list |
 
 Every code only sees and changes data for its own districts.
 

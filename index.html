@@ -153,6 +153,7 @@ tbody tr:nth-child(even) td.stick{background:color-mix(in srgb,var(--sunk) 45%,v
 .chipbtn:hover{border-color:var(--flood)}
 .chipbtn[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 table.daily td{white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+table.daily td.longtxt{white-space:pre-wrap;min-width:360px;max-width:560px}
 tr.subtotal td{background:var(--flood-soft)!important;font-weight:600;border-bottom:2px solid var(--line)}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
@@ -271,7 +272,7 @@ const myDistricts=r=>[...S.districts].filter(c=>!r||DIST[c]?.r===r).sort((a,b)=>
 const isSuper=()=>S.types.has("SUPER");
 const canDo={impactEntry:()=>S.types.has("IM"),responseReport:()=>S.types.has("IM")||S.types.has("VIEW"),responseEntry:()=>S.types.has("RM"),impactReport:()=>S.types.has("RM")||S.types.has("VIEW"),
   qualEntry:()=>S.types.has("IM"),
-  dailyImpact:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyResponse:()=>S.types.has("SUPER")||S.types.has("VIEW")};
+  dailyImpact:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyQual:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyResponse:()=>S.types.has("SUPER")||S.types.has("VIEW")};
 
 function go(view){
   if(S.dirty && view!==S.view && !go.force){ pendingLeave(view); return; }
@@ -282,7 +283,7 @@ function pendingLeave(view){
   host.hidden=false; host.innerHTML=`<div class="msg bad">You have unsaved changes. <button class="btn sm" id="lvYes" type="button">Leave without saving</button> <button class="btn sm ghost" id="lvNo" type="button">Stay</button></div>`;
   $("#lvYes").onclick=()=>{go.force=true;go(view)}; $("#lvNo").onclick=()=>{host.hidden=true};
 }
-function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="dailyImpact"||S.view==="dailyResponse"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="qualEntry") renderQualList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
+function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="dailyImpact"||S.view==="dailyResponse"||S.view==="dailyQual"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="qualEntry") renderQualList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
 
 $("#goHome").onclick=()=>go("home");
 $("#lock").onclick=()=>{ go.force=true; stopSync(); S.pin=null; S.types=new Set(); S.districts=new Set(); go("pin"); };
@@ -295,7 +296,7 @@ function render(){
     $("#who").innerHTML=`Code <b aria-label="hidden code">${masked()}</b> · ${n>6? n+" districts" : esc(list.join(", "))}`;
   }
   if(S.view!=="pin" && (!S.pin || (canDo[S.view] && !canDo[S.view]()))) S.view = S.pin? "home":"pin";
-  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response"),qualEntry:renderQualEntry})[S.view]();
+  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response"),dailyQual:()=>renderDaily("qualitative"),qualEntry:renderQualEntry})[S.view]();
 }
 
 /* ---------- PIN page ---------- */
@@ -325,13 +326,14 @@ function renderPin(){
 /* ---------- Home ---------- */
 function renderHome(){
   const t=[
-    ["impactEntry","1","Flood Impact entry","Record the first picture of flood impact for one settlement or site at a time.","impact"],
-    ["responseEntry","2","Flood Response entry","Report people reached by sector against each affected village, in one table.","response"],
-    ["impactReport","3","Flood Impact Report","Location summary and detail of reported impact for your districts.","impact"],
-    ["responseReport","4","Flood Response Report","Village summary, partner mapping and organisation entries.","response"],
-    ["dailyImpact","5","Daily Impact Report","Every impact record by region, district, month and day, with district subtotals.","impact"],
-    ["dailyResponse","6","Daily Response Report","Every response entry by region, district, month and day, with district subtotals.","response"],
-    ["qualEntry","7","Daily Qualitative Information entry","A short daily narrative of the situation in a district.","impact"]];
+    ["qualEntry","1","Daily Qualitative Information entry","A short daily narrative of the situation in a district.","impact"],
+    ["impactEntry","2","Flood Impact entry","Record the first picture of flood impact for one settlement or site at a time.","impact"],
+    ["responseEntry","3","Flood Response entry","Report people reached by sector against each affected village, in one table.","response"],
+    ["impactReport","4","Flood Impact Report","Location summary and detail of reported impact for your districts.","impact"],
+    ["responseReport","5","Flood Response Report","Village summary, partner mapping and organisation entries.","response"],
+    ["dailyImpact","6","Daily Impact Report","Every impact record by region, district, month and day, with district subtotals.","impact"],
+    ["dailyResponse","7","Daily Response Report","Every response entry by region, district, month and day, with district subtotals.","response"],
+    ["dailyQual","8","Daily Qualitative Report","Every qualitative entry by region, district, month and day.","impact"]];
   const typeTxt = isSuper() ? "Super code (all functions and data)" : S.types.has("VIEW") ? "Reporting code (reports only)" : S.types.has("IM")&&S.types.has("RM") ? "Coordination code (all functions)" : S.types.has("IM") ? "IMPACT Kobo and Response Power BI code" : "Response Kobo and IMPACT Power BI code";
   const rows=[...S.districts].map(c=>`<span class="chip">${esc(dName(c))} · ${esc(rName(DIST[c]?.r))}</span>`).join("");
   $("#app").innerHTML=`<div class="wrap">
@@ -339,7 +341,7 @@ function renderHome(){
     <div class="chips">${S.districts.size>12? `<span class="chip">All ${S.districts.size} districts</span>`: rows}</div></div>
     <div class="tiles">${t.map(([v,n,h,p,k])=>{const ok=canDo[v]();return `<button type="button" class="tile ${k}" data-go="${v}" ${ok?"":"disabled"} aria-disabled="${!ok}">
       <span class="n">${n}</span><h2>${h}</h2><p>${p}</p><span class="state">${ok?"Available":"Not available with this code"}</span></button>`}).join("")}</div>
-    <p class="note">Codes starting IM open Flood Impact entry, Daily Qualitative Information entry and the Flood Response Report. Codes starting RM open Flood Response entry and the Flood Impact Report. Daily reports are open to coordination codes only. Data shown everywhere is limited to the districts linked to your code.</p>
+    <p class="note">Codes starting IM open Daily Qualitative Information entry, Flood Impact entry and the Flood Response Report. Codes starting RM open Flood Response entry and the Flood Impact Report. Daily reports are open to coordination codes only. Data shown everywhere is limited to the districts linked to your code.</p>
   </div>`;
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ if(!b.disabled) go(b.dataset.go) });
 }
@@ -351,7 +353,7 @@ let editingImpact=null;
 function renderImpactEntry(){
   const regs=myRegions();
   $("#app").innerHTML=`<div class="wrap narrow">
-   <div class="page-head"><div><div class="eyebrow">1 · Flood Impact entry</div><h1>El Niño | Impact Reporting Form</h1>
+   <div class="page-head"><div><div class="eyebrow">2 · Flood Impact entry</div><h1>El Niño | Impact Reporting Form</h1>
    <div class="sub">Record the first traceable picture of the crisis within 24 hours. Do not record priority needs, response activities, people reached or delivered quantities. Report ONE settlement or site per record.</div></div></div>
    <div id="leaveBox" hidden></div>
    <form id="impForm" novalidate>
@@ -477,7 +479,7 @@ let editingQual=null;
 function renderQualEntry(){
   const regs=myRegions();
   $("#app").innerHTML=`<div class="wrap narrow">
-   <div class="page-head"><div><div class="eyebrow">7 · Daily Qualitative Information entry</div><h1>Daily Qualitative Information</h1>
+   <div class="page-head"><div><div class="eyebrow">1 · Daily Qualitative Information entry</div><h1>Daily Qualitative Information</h1>
    <div class="sub">A short daily narrative of the situation in one district. Use reported facts only.</div></div></div>
    <div id="leaveBox" hidden></div>
    <form id="qForm" novalidate>
@@ -566,7 +568,7 @@ function renderResponseEntry(){
   const rows=respRows();
   const sectors=[]; RESP_IND.forEach(i=>{const last=sectors[sectors.length-1]; if(last&&last[0]===i[3]) last[1]++; else sectors.push([i[3],1]);});
   $("#app").innerHTML=`<div class="wrap">
-   <div class="page-head"><div><div class="eyebrow">2 · Flood Response entry</div><h1>El Niño | Partner Response Report</h1>
+   <div class="page-head"><div><div class="eyebrow">3 · Flood Response entry</div><h1>El Niño | Partner Response Report</h1>
    <div class="sub">One row per affected village or site from the impact reports for your districts. Enter your organisation name, fill in the rows where you responded, then press Submit. Blank rows are not submitted. Submitted rows are listed below the table; submitting the same village again updates your earlier entry.</div></div></div>
    <div id="leaveBox" hidden></div>
    <fieldset><legend>Response Report</legend><div class="grid2">
@@ -675,7 +677,7 @@ const recDay=r=>(r.report_date||r.report_reference||(r._savedAt||"").slice(0,10)
 function dashFrame(kind,title,views){
   const st=DASH[kind]; const regs=myRegions();
   return `<div class="wrap">
-   <div class="dash-head"><div><div class="eyebrow">${kind==="impact"?"3 · Flood Impact Report":"4 · Flood Response Report"}</div><h1><span class="draft">DRAFT</span> - El Niño - ${title}</h1></div>
+   <div class="dash-head"><div><div class="eyebrow">${kind==="impact"?"4 · Flood Impact Report":"5 · Flood Response Report"}</div><h1><span class="draft">DRAFT</span> - El Niño - ${title}</h1></div>
    <div class="disclaimer"><b>Disclaimer</b>: The information presented is preliminary and remains subject to verification and updates as new information becomes available. This dashboard is intended to facilitate access to and visualization of available information for ABCs and partners. For official datasets or validated figures, please contact the relevant ABC or OCHA office.</div></div>
    <div class="toolbar">
      <div class="f"><label for="dReg">Region</label><select id="dReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
@@ -738,8 +740,11 @@ const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}<
 
 /* ---------- 5/6. Daily reports ---------- */
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAILY={impact:{region:"",district:"",month:"",day:""},response:{region:"",district:"",month:"",day:""}};
+const DAILY={impact:{region:"",district:"",month:"",day:""},response:{region:"",district:"",month:"",day:""},qualitative:{region:"",district:"",month:"",day:""}};
+const DAILY_META={impact:["6","Daily Impact Report","Daily_Impact","Daily impact"],response:["7","Daily Response Report","Daily_Response","Daily response"],qualitative:["8","Daily Qualitative Report","Daily_Qualitative","Daily qualitative"]};
 const DAILY_COLS={
+  qualitative:[["_date","Date"],["affected_region","Region","r"],["affected_district","District","d"],["reporting_organisation","Reporting organisation"],["abc_role","ABC role",ABC_ROLE],
+    ["crisis_onset","Crisis began"],["event_status","Event status",EVENT],["event_description","Description","long"],["_savedAt","Submitted"]],
   impact:[["_date","Reference date"],["affected_region","Region","r"],["affected_district","District","d"],["affected_settlement","Settlement / site"],["reporting_organisation","Reporting organisation"],
     ["abc_role","ABC role",ABC_ROLE],["crisis_type","Crisis type",CRISIS],["crisis_onset","Crisis onset"],["event_status","Event status",EVENT],["event_summary","Event summary"],["location_type","Type of location",LOCTYPE],
     ["_gps","GPS"],["location_reference_note","Location reference"],
@@ -751,6 +756,7 @@ const DAILY_COLS={
     ...RESP_IND.map(([k,l])=>[k,l,"n"]),["_Response_Type_Other","Response type - other"],["Response_Type_Other_People_Reached","Other - people reached","n"],
     ["actual_start","Actual start"],["actual_completion","Actual completion"],["remarks","Update note"],["confirm_accuracy","Confirmed",[["yes","Yes"],["no","No"]]],["_savedAt","Submitted"]]};
 const recDate=(kind,r)=>(kind==="impact"? (r.report_reference||"") : (r.report_date||"")) || (r._savedAt||"").slice(0,10);
+const recWord=k=>k==="qualitative"?["entry","entries"]:["record","records"];
 function cellVal(c,r){
   const [k,,t]=c;
   if(k==="_gps") return (r.geo_lat||r.geo_lon)? `${r.geo_lat||""}, ${r.geo_lon||""}` : "";
@@ -772,9 +778,9 @@ function renderDaily(kind){
   if(st.day&&!days.includes(st.day)) st.day="";
   const mLabel=m=>{const [y,mm]=m.split("-");return `${MONTHS[Number(mm)-1]||mm} ${y}`};
   const chip=(grp,val,lab,on)=>`<button type="button" class="chipbtn" data-${grp}="${esc(val)}" aria-pressed="${on}">${esc(lab)}</button>`;
-  const title=kind==="impact"?"Daily Impact Report":"Daily Response Report";
+  const [dNum,title,fileKey,sheetName]=DAILY_META[kind];
   $("#app").innerHTML=`<div class="wrap">
-   <div class="dash-head"><div><div class="eyebrow">${kind==="impact"?"5":"6"} · ${title}</div><h1><span class="draft">DRAFT</span> - El Niño - ${title}</h1></div>
+   <div class="dash-head"><div><div class="eyebrow">${dNum} · ${title}</div><h1><span class="draft">DRAFT</span> - El Niño - ${title}</h1></div>
    <div class="disclaimer"><b>Disclaimer</b>: The information presented is preliminary and remains subject to verification and updates as new information becomes available. For official datasets or validated figures, please contact the relevant ABC or OCHA office.</div></div>
    <div class="toolbar">
      <div class="f"><label for="yReg">Region</label><select id="yReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
@@ -798,12 +804,13 @@ function renderDaily(kind){
   const dists=[...byD.keys()].sort((a,b)=>dName(a).localeCompare(dName(b)));
   const sum=(rs,k)=>rs.reduce((s,r)=>s+num(r[k]),0);
   const firstNum=cols.findIndex(c=>c[2]==="n");
-  const totalRow=(cls,lab,rs)=>`<tr class="${cls}"><td class="stick" colspan="${firstNum}">${esc(lab)}</td>${cols.slice(firstNum).map(c=>c[2]==="n"?`<td class="num">${fmt(sum(rs,c[0]))}</td>`:"<td></td>").join("")}</tr>`;
+  const totalRow=(cls,lab,rs)=> firstNum<0 ? `<tr class="${cls}"><td class="stick" colspan="${cols.length}">${esc(lab)}</td></tr>`
+    : `<tr class="${cls}"><td class="stick" colspan="${firstNum}">${esc(lab)}</td>${cols.slice(firstNum).map(c=>c[2]==="n"?`<td class="num">${fmt(sum(rs,c[0]))}</td>`:"<td></td>").join("")}</tr>`;
   const sel=[st.region&&rName(st.region),st.district&&dName(st.district),st.month&&mLabel(st.month),st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
-  body.innerHTML=`<div class="meta">${esc(sel)} · ${recs.length} record${recs.length>1?"s":""} in ${dists.length} district${dists.length>1?"s":""}</div>
+  body.innerHTML=`<div class="meta">${esc(sel)} · ${recs.length} ${recWord(kind)[recs.length>1?1:0]} in ${dists.length} district${dists.length>1?"s":""}</div>
   <div class="tbl-wrap"><table class="daily"><thead><tr>${cols.map((c,i)=>`<th class="${i===0?"stick ":""}${c[2]==="n"?"num":""}">${esc(c[1])}</th>`).join("")}</tr></thead>
   <tbody>${dists.map(d=>{const rs=byD.get(d).sort((a,b)=>b._date.localeCompare(a._date)||(a.affected_settlement||"").localeCompare(b.affected_settlement||""));
-    return rs.map(r=>`<tr>${cols.map((c,i)=>c[2]==="n"?`<td class="num">${fmt(num(r[c[0]]))}</td>`:`<td class="${i===0?"stick":""}" title="${esc(cellVal(c,r))}">${esc(cellVal(c,r))}</td>`).join("")}</tr>`).join("")+totalRow("subtotal","Subtotal · "+dName(d)+" ("+rs.length+")",rs);}).join("")}</tbody>
+    return rs.map(r=>`<tr>${cols.map((c,i)=>c[2]==="n"?`<td class="num">${fmt(num(r[c[0]]))}</td>`:(c[2]==="long"?`<td class="longtxt">${esc(cellVal(c,r))}</td>`:`<td class="${i===0?"stick":""}" title="${esc(cellVal(c,r))}">${esc(cellVal(c,r))}</td>`)).join("")}</tr>`).join("")+totalRow("subtotal","Subtotal · "+dName(d)+" ("+rs.length+")",rs);}).join("")}</tbody>
   <tfoot>${totalRow("","Grand total ("+recs.length+")",recs)}</tfoot></table></div>`;
   const ex=$("#yExport"); ex.disabled=false;
   ex.onclick=async()=>{
@@ -814,7 +821,7 @@ function renderDaily(kind){
     const about=[["El Niño - "+title],["Filters",sel],["Records",recs.length],["Districts",dists.length],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
     const stamp=new Date().toISOString().slice(0,10);
     const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
-    await exportXlsx(`El_Nino_${kind==="impact"?"Daily_Impact":"Daily_Response"}_Report${part?"_"+part:""}_${stamp}.xlsx`, kind==="impact"?"Daily impact":"Daily response", aoa, about);
+    await exportXlsx(`El_Nino_${fileKey}_Report${part?"_"+part:""}_${stamp}.xlsx`, sheetName, aoa, about);
   };
 }
 async function exportXlsx(filename,sheetName,aoa,about){
