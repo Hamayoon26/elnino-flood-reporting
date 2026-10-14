@@ -25,6 +25,9 @@ const RESPONSE_FIELDS = ['id','_savedAt','Response_Form_Code','Reporting_Organis
   'affected_settlement','report_date','response_status','TOTAL_Number_of_People'].concat(RESP_IND,
   ['_Response_Type_Other','Response_Type_Other_People_Reached','actual_start','actual_completion','remarks','confirm_accuracy']);
 
+const QUAL_FIELDS = ['id','_savedAt','_createdAt','_pin','report_date','reporting_organisation','abc_role','crisis_onset',
+  'event_status','affected_region','affected_district','event_description'];
+
 const NUMERIC = new Set(['people_affected','returnees','deaths','injuries','shelters_damaged','shelters_destroyed',
   'latrines_damaged','water_points_damaged','farmland_affected','schools_affected','health_facilities_affected',
   'livestock_dead','TOTAL_Number_of_People','Response_Type_Other_People_Reached'].concat(RESP_IND));
@@ -33,9 +36,10 @@ const LISTS = new Set(['reported_access_constraints','main_source']);
 const COLL = {
   impact:   { sheet: 'Impact',   fields: IMPACT_FIELDS,   needs: 'IM' },
   response: { sheet: 'Response', fields: RESPONSE_FIELDS, needs: 'RM' },
+  qualitative: { sheet: 'Qualitative', fields: QUAL_FIELDS, needs: 'IM' },
 };
 
-/** Run once from the editor: creates the three tabs with headers. */
+/** Run once from the editor: creates the Codes, Impact, Response and Qualitative tabs with headers. */
 function setup() {
   const ss = SpreadsheetApp.getActive();
   if (!ss) throw new Error('This script is not attached to a Google Sheet. Open your Sheet, go to Extensions > Apps Script, and paste the code there.');
@@ -61,7 +65,7 @@ function setup() {
 
 function doGet() {
   const ss = SpreadsheetApp.getActive();
-  if (ss && (!ss.getSheetByName('Codes') || !ss.getSheetByName('Impact') || !ss.getSheetByName('Response'))) setup();
+  if (ss && (!ss.getSheetByName('Codes') || !ss.getSheetByName('Impact') || !ss.getSheetByName('Response') || !ss.getSheetByName('Qualitative'))) setup();
   return json({ ok: true, service: 'El Nino Flood Reporting API' });
 }
 
@@ -73,7 +77,7 @@ function doPost(e) {
     if (!who) return json({ ok: false, error: 'bad_pin' });
     switch (body.action) {
       case 'login':  return json({ ok: true, types: who.types, districts: who.districts });
-      case 'list':   return json({ ok: true, impact: readAll('impact', who), response: readAll('response', who) });
+      case 'list':   return json({ ok: true, impact: readAll('impact', who), response: readAll('response', who), qualitative: readAll('qualitative', who) });
       case 'save':   return json(save(body.coll, body.rec, who, String(body.pin).toUpperCase()));
       case 'delete': return json(remove(body.coll, body.id, who));
       default:       return json({ ok: false, error: 'Unknown action' });
@@ -165,10 +169,10 @@ function save(coll, rec, who, pin) {
     if (r > 0) {
       const old = rowToObj(t.c.fields, t.sh.getRange(r, 1, 1, t.c.fields.length).getValues()[0]);
       if (who.districts.indexOf(old.affected_district) < 0) return { ok: false, error: 'not_allowed' };
-      if (coll === 'impact') rec._createdAt = old._createdAt || now;
-    } else if (coll === 'impact') rec._createdAt = now;
+      if (coll !== 'response') rec._createdAt = old._createdAt || now;
+    } else if (coll !== 'response') rec._createdAt = now;
     rec._savedAt = now;
-    if (coll === 'impact') rec._pin = pin; else rec.Response_Form_Code = pin;
+    if (coll === 'response') rec.Response_Form_Code = pin; else rec._pin = pin;
     const row = objToRow(t.c.fields, rec);
     if (r > 0) t.sh.getRange(r, 1, 1, row.length).setValues([row]);
     else t.sh.appendRow(row);

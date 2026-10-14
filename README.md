@@ -9,15 +9,18 @@ A web app for Area-Based Coordination forums in Somalia. People enter a district
 
 5. **Daily Impact Report**: every impact record, filtered by region, district, month and day, with a subtotal per district
 6. **Daily Response Report**: the same for response entries
+7. **Daily Qualitative Information entry**: a short daily narrative per district (organisation, ABC role, when the crisis began, event status, region, district, description), saved to the `Qualitative` tab
+
+The Flood Impact Report and Flood Response Report also have Month and Day filters and an Export to Excel button.
 
 Code types (column B of the `Codes` tab):
 
 | Type | Opens | Notes |
 |---|---|---|
-| `IM` | 1 Flood Impact entry, 4 Flood Response Report | Can edit impact records, cannot delete |
+| `IM` | 1 Flood Impact entry, 4 Flood Response Report, 7 Daily Qualitative entry | Can edit impact and qualitative records, cannot delete |
 | `RM` | 2 Flood Response entry, 3 Flood Impact Report | Cannot edit or delete from the submitted list |
 | `VIEW` | 3, 4, 5, 6 (reports only) | Cannot enter or change data |
-| `ALL` | Everything, 1 to 6 | Super code: the only type that can delete, and edit from the submitted responses list |
+| `ALL` | Everything, 1 to 7 | Super code: the only type that can delete, and edit from the submitted responses list |
 
 Every code only sees and changes data for its own districts.
 
@@ -34,7 +37,7 @@ Every code only sees and changes data for its own districts.
 1. Create a new Google Sheet, for example "El Niño Flood Reporting data".
 2. Open **Extensions → Apps Script**.
 3. Delete the sample code and paste in everything from `apps-script/Code.gs`. Save.
-4. In the function menu at the top, choose **setup** and press **Run**. Approve the permissions when asked. This creates the `Codes`, `Impact` and `Response` tabs.
+4. In the function menu at the top, choose **setup** and press **Run**. Approve the permissions when asked. This creates the `Codes`, `Impact`, `Response` and `Qualitative` tabs.
 
 ### 2. Add the codes
 

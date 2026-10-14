@@ -238,7 +238,7 @@ const today=()=>new Date().toISOString().slice(0,10);
 function toast(t){const el=$("#toast");el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,3200)}
 
 /* ---------- storage: Google Apps Script web app (Google Sheet) ---------- */
-const store={mode:"loading",impact:new Map(),response:new Map(),timer:null};
+const store={mode:"loading",impact:new Map(),response:new Map(),qualitative:new Map(),timer:null};
 const API_ERR={bad_pin:"That code isn't recognised. Check it against the code list from your ABC forum and try again.",not_allowed:"Your code doesn't allow this action for that district.",busy:"The database is busy. Try again in a moment."};
 async function api(action,payload={}){
   if(!API_URL) throw new Error("This site isn't connected to its database yet. Add the Apps Script web app URL to config.js.");
@@ -252,12 +252,12 @@ async function api(action,payload={}){
 async function loadData(quiet){
   try{
     const j=await api("list");
-    store.impact=new Map(j.impact.map(r=>[r.id,r])); store.response=new Map(j.response.map(r=>[r.id,r]));
+    store.impact=new Map(j.impact.map(r=>[r.id,r])); store.response=new Map(j.response.map(r=>[r.id,r])); store.qualitative=new Map((j.qualitative||[]).map(r=>[r.id,r]));
     store.mode="api"; $("#banner").hidden=true; rerender();
   }catch(e){ if(!quiet) showBanner(e.message); }
 }
 function startSync(){ clearInterval(store.timer); store.mode="loading"; loadData(); store.timer=setInterval(()=>loadData(true),60000); }
-function stopSync(){ clearInterval(store.timer); store.impact=new Map(); store.response=new Map(); store.mode="loading"; }
+function stopSync(){ clearInterval(store.timer); store.impact=new Map(); store.response=new Map(); store.qualitative=new Map(); store.mode="loading"; }
 async function saveDoc(coll,id,data){ const j=await api("save",{coll,rec:{...data,id}}); store[coll].set(id,j.rec); }
 async function deleteDoc(coll,id){ await api("delete",{coll,id}); store[coll].delete(id); }
 function showBanner(t){const b=$("#banner");b.textContent=t;b.hidden=false}
@@ -270,6 +270,7 @@ const myRegions=()=>[...new Set([...S.districts].map(c=>DIST[c]?.r).filter(Boole
 const myDistricts=r=>[...S.districts].filter(c=>!r||DIST[c]?.r===r).sort((a,b)=>dName(a).localeCompare(dName(b)));
 const isSuper=()=>S.types.has("SUPER");
 const canDo={impactEntry:()=>S.types.has("IM"),responseReport:()=>S.types.has("IM")||S.types.has("VIEW"),responseEntry:()=>S.types.has("RM"),impactReport:()=>S.types.has("RM")||S.types.has("VIEW"),
+  qualEntry:()=>S.types.has("IM"),
   dailyImpact:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyResponse:()=>S.types.has("SUPER")||S.types.has("VIEW")};
 
 function go(view){
@@ -281,7 +282,7 @@ function pendingLeave(view){
   host.hidden=false; host.innerHTML=`<div class="msg bad">You have unsaved changes. <button class="btn sm" id="lvYes" type="button">Leave without saving</button> <button class="btn sm ghost" id="lvNo" type="button">Stay</button></div>`;
   $("#lvYes").onclick=()=>{go.force=true;go(view)}; $("#lvNo").onclick=()=>{host.hidden=true};
 }
-function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="dailyImpact"||S.view==="dailyResponse"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
+function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="dailyImpact"||S.view==="dailyResponse"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="qualEntry") renderQualList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
 
 $("#goHome").onclick=()=>go("home");
 $("#lock").onclick=()=>{ go.force=true; stopSync(); S.pin=null; S.types=new Set(); S.districts=new Set(); go("pin"); };
@@ -294,7 +295,7 @@ function render(){
     $("#who").innerHTML=`Code <b aria-label="hidden code">${masked()}</b> · ${n>6? n+" districts" : esc(list.join(", "))}`;
   }
   if(S.view!=="pin" && (!S.pin || (canDo[S.view] && !canDo[S.view]()))) S.view = S.pin? "home":"pin";
-  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response")})[S.view]();
+  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response"),qualEntry:renderQualEntry})[S.view]();
 }
 
 /* ---------- PIN page ---------- */
@@ -329,7 +330,8 @@ function renderHome(){
     ["impactReport","3","Flood Impact Report","Location summary and detail of reported impact for your districts.","impact"],
     ["responseReport","4","Flood Response Report","Village summary, partner mapping and organisation entries.","response"],
     ["dailyImpact","5","Daily Impact Report","Every impact record by region, district, month and day, with district subtotals.","impact"],
-    ["dailyResponse","6","Daily Response Report","Every response entry by region, district, month and day, with district subtotals.","response"]];
+    ["dailyResponse","6","Daily Response Report","Every response entry by region, district, month and day, with district subtotals.","response"],
+    ["qualEntry","7","Daily Qualitative Information entry","A short daily narrative of the situation in a district.","impact"]];
   const typeTxt = isSuper() ? "Super code (all functions and data)" : S.types.has("VIEW") ? "Reporting code (reports only)" : S.types.has("IM")&&S.types.has("RM") ? "Coordination code (all functions)" : S.types.has("IM") ? "IMPACT Kobo and Response Power BI code" : "Response Kobo and IMPACT Power BI code";
   const rows=[...S.districts].map(c=>`<span class="chip">${esc(dName(c))} · ${esc(rName(DIST[c]?.r))}</span>`).join("");
   $("#app").innerHTML=`<div class="wrap">
@@ -337,7 +339,7 @@ function renderHome(){
     <div class="chips">${S.districts.size>12? `<span class="chip">All ${S.districts.size} districts</span>`: rows}</div></div>
     <div class="tiles">${t.map(([v,n,h,p,k])=>{const ok=canDo[v]();return `<button type="button" class="tile ${k}" data-go="${v}" ${ok?"":"disabled"} aria-disabled="${!ok}">
       <span class="n">${n}</span><h2>${h}</h2><p>${p}</p><span class="state">${ok?"Available":"Not available with this code"}</span></button>`}).join("")}</div>
-    <p class="note">Codes starting IM open Flood Impact entry and the Flood Response Report. Codes starting RM open Flood Response entry and the Flood Impact Report. Daily reports are open to coordination codes only. Data shown everywhere is limited to the districts linked to your code.</p>
+    <p class="note">Codes starting IM open Flood Impact entry, Daily Qualitative Information entry and the Flood Response Report. Codes starting RM open Flood Response entry and the Flood Impact Report. Daily reports are open to coordination codes only. Data shown everywhere is limited to the districts linked to your code.</p>
   </div>`;
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ if(!b.disabled) go(b.dataset.go) });
 }
@@ -470,6 +472,85 @@ function renderImpactList(){
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const box=host.querySelector(`[data-delbox="${b.dataset.del}"]`);box.innerHTML=`<span class="confirm">Delete? <button class="btn sm danger" type="button">Yes</button><button class="btn sm ghost" type="button">No</button></span>`;const [y,n]=box.querySelectorAll("button");y.onclick=async()=>{try{await deleteDoc("impact",b.dataset.del);toast("Record deleted");renderImpactList()}catch(e){toast("Couldn't delete: "+(e.message||e.code))}};n.onclick=renderImpactList;});
 }
 
+/* ---------- 7. Daily Qualitative Information entry ---------- */
+let editingQual=null;
+function renderQualEntry(){
+  const regs=myRegions();
+  $("#app").innerHTML=`<div class="wrap narrow">
+   <div class="page-head"><div><div class="eyebrow">7 · Daily Qualitative Information entry</div><h1>Daily Qualitative Information</h1>
+   <div class="sub">A short daily narrative of the situation in one district. Use reported facts only.</div></div></div>
+   <div id="leaveBox" hidden></div>
+   <form id="qForm" novalidate>
+   <fieldset><legend>Reporting</legend><div class="grid2">
+     <div class="f"><label class="req" for="q_org">Reporting organisation</label><input type="text" id="q_org" name="reporting_organisation" data-req></div>
+   </div>
+     <div class="f"><span class="lab req">Role in the Area-Based Coordination (ABC) forum</span>${radios("abc_role",ABC_ROLE,1)}</div>
+   </fieldset>
+   <fieldset><legend>Event</legend>
+     <div class="grid2">
+       <div class="f"><label for="q_onset">When did the crisis begin or first become evident?</label><input type="date" id="q_onset" name="crisis_onset"></div>
+     </div>
+     <div class="f"><span class="lab req">What is the current status of the event?</span>${radios("event_status",EVENT,1)}</div>
+     <div class="grid2">
+      <div class="f"><label class="req" for="q_region">Region</label><select id="q_region" name="affected_region" data-req><option value="">Select region</option>${regs.map(r=>`<option value="${r}">${esc(rName(r))}</option>`).join("")}</select></div>
+      <div class="f"><label class="req" for="q_district">District</label><select id="q_district" name="affected_district" data-req><option value="">Select district</option></select></div>
+     </div>
+     <div class="f"><label class="req" for="q_desc">Briefly describe the event</label><textarea id="q_desc" name="event_description" data-req style="min-height:220px" placeholder="What happened, where, who is affected, what has changed since the last report"></textarea></div>
+   </fieldset>
+   <div id="qMsg" class="msg" hidden></div>
+   <div class="actions"><button class="btn primary" type="submit">Submit</button><button class="btn ghost" type="button" id="qReset">Clear form</button><span id="qEditTag" class="pill new" hidden>Editing a saved entry</span></div>
+   </form>
+   <h2 style="margin:34px 0 10px;font-size:22px">Saved qualitative entries for your districts</h2>
+   <div id="qList"></div>
+  </div>`;
+  const f=$("#qForm");
+  const fillDist=()=>{f.affected_district.innerHTML=`<option value="">Select district</option>`+myDistricts(f.affected_region.value).map(c=>`<option value="${c}">${esc(dName(c))}</option>`).join("")};
+  f.affected_region.onchange=fillDist;
+  if(regs.length===1){f.affected_region.value=regs[0];fillDist();}
+  if(myDistricts().length===1) f.affected_district.value=myDistricts()[0];
+  f.oninput=()=>{S.dirty=true};
+  $("#qReset").onclick=()=>{editingQual=null;S.dirty=false;renderQualEntry()};
+  f.onsubmit=async e=>{
+    e.preventDefault();
+    const m=$("#qMsg"); f.querySelectorAll(".invalid").forEach(x=>x.classList.remove("invalid"));
+    const missing=[];
+    f.querySelectorAll("[data-req]").forEach(el=>{
+      if(el.type==="radio"){ if(![...f.querySelectorAll(`input[name="${el.name}"]`)].some(x=>x.checked)){const box=el.closest(".opts");if(!box.classList.contains("invalid")){box.classList.add("invalid");missing.push(box.closest(".f").querySelector(".lab").textContent)}} }
+      else if(!el.value.trim()){ el.classList.add("invalid"); missing.push(f.querySelector(`label[for="${el.id}"]`)?.textContent||el.name); }
+    });
+    if(missing.length){ m.hidden=false; m.className="msg bad"; m.textContent="Complete the required fields: "+missing.join("; "); return; }
+    const rec={}; for(const [k,v] of new FormData(f).entries()) rec[k]=String(v).trim();
+    if(!allowed(rec.affected_district)){ m.hidden=false;m.className="msg bad";m.textContent="That district isn't linked to your code.";return; }
+    const now=new Date().toISOString();
+    rec._pin=S.pin; rec._savedAt=now; rec.report_date=editingQual? (store.qualitative.get(editingQual)?.report_date||now.slice(0,10)) : now.slice(0,10);
+    rec._createdAt=editingQual? (store.qualitative.get(editingQual)?._createdAt||now) : now;
+    const id=editingQual||("qual-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7));
+    try{ await saveDoc("qualitative",id,rec); }catch(err){ m.hidden=false;m.className="msg bad";m.textContent=err.message;return; }
+    S.dirty=false; editingQual=null; toast("Saved: "+dName(rec.affected_district)); go.force=true; go("qualEntry");
+  };
+  renderQualList();
+}
+function loadQualIntoForm(id){
+  const r=store.qualitative.get(id); if(!r) return;
+  renderQualEntry(); editingQual=id; const f=$("#qForm");
+  f.reporting_organisation.value=r.reporting_organisation||""; f.crisis_onset.value=r.crisis_onset||"";
+  f.affected_region.value=r.affected_region||""; f.affected_region.onchange(); f.affected_district.value=r.affected_district||"";
+  f.event_description.value=r.event_description||"";
+  f.querySelectorAll('input[name=abc_role]').forEach(i=>i.checked=i.value===r.abc_role);
+  f.querySelectorAll('input[name=event_status]').forEach(i=>i.checked=i.value===r.event_status);
+  $("#qEditTag").hidden=false; f.scrollIntoView({behavior:"smooth"});
+}
+function renderQualList(){
+  const host=$("#qList"); if(!host) return;
+  const rows=[...store.qualitative.entries()].filter(([,r])=>allowed(r.affected_district)).sort((a,b)=>(b[1]._savedAt||"").localeCompare(a[1]._savedAt||""));
+  if(!rows.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No qualitative entries yet</b>Entries you submit above for your districts will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
+  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th>Date</th><th>Region</th><th>District</th><th>Organisation</th><th>ABC role</th><th>Crisis began</th><th>Status</th><th style="min-width:320px">Description</th><th></th></tr></thead><tbody>
+  ${rows.map(([id,r])=>`<tr><td style="white-space:nowrap">${esc(r.report_date||(r._savedAt||"").slice(0,10))}</td><td>${esc(rName(r.affected_region))}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.reporting_organisation)}</td><td>${esc(label(ABC_ROLE,r.abc_role))}</td><td style="white-space:nowrap">${esc(r.crisis_onset)}</td><td>${esc(label(EVENT,r.event_status))}</td><td style="white-space:pre-wrap">${esc(r.event_description)}</td>
+  <td style="white-space:nowrap"><button class="btn sm" type="button" data-qedit="${esc(id)}">Edit</button>${isSuper()?` <span data-qdelbox="${esc(id)}"><button class="btn sm ghost" type="button" data-qdel="${esc(id)}">Delete</button></span>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+  host.querySelectorAll("[data-qedit]").forEach(b=>b.onclick=()=>loadQualIntoForm(b.dataset.qedit));
+  host.querySelectorAll("[data-qdel]").forEach(b=>b.onclick=()=>{const box=host.querySelector(`[data-qdelbox="${CSS.escape(b.dataset.qdel)}"]`);box.innerHTML=`<span class="confirm">Delete? <button class="btn sm danger" type="button">Yes</button><button class="btn sm ghost" type="button">No</button></span>`;const [y,n]=box.querySelectorAll("button");y.onclick=async()=>{try{await deleteDoc("qualitative",b.dataset.qdel);toast("Entry deleted");renderQualList()}catch(e){toast("Couldn't delete: "+(e.message||e.code))}};n.onclick=renderQualList;});
+}
+
 /* ---------- 2. Response entry ---------- */
 let respOrg="";
 function respRows(){
@@ -589,7 +670,8 @@ async function saveResponses(){
 }
 
 /* ---------- shared dashboard frame ---------- */
-const DASH={impact:{region:"",district:"",view:"summary"},response:{region:"",district:"",view:"village"}};
+const DASH={impact:{region:"",district:"",month:"",day:"",view:"summary"},response:{region:"",district:"",month:"",day:"",view:"village"}};
+const recDay=r=>(r.report_date||r.report_reference||(r._savedAt||"").slice(0,10)||"");
 function dashFrame(kind,title,views){
   const st=DASH[kind]; const regs=myRegions();
   return `<div class="wrap">
@@ -600,18 +682,58 @@ function dashFrame(kind,title,views){
      <div class="f"><label for="dDist">District</label><select id="dDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
      <button class="btn" type="button" id="dRefresh" title="Clear filters and reload the latest data">Refresh</button>
      <div class="seg" role="group" aria-label="Report view">${views.map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${st.view===v}">${l}</button>`).join("")}</div>
+     <button class="btn primary" type="button" id="dExport">Export to Excel</button>
    </div>
+   ${dateChips(kind,st)}
    <div id="dBody"></div></div>`;
+}
+function dateChips(kind,st){
+  const inRD=r=>allowed(r.affected_district)&&(!st.region||(r.affected_region||DIST[r.affected_district]?.r)===st.region)&&(!st.district||r.affected_district===st.district);
+  const recs=[...store[kind].values()].filter(inRD);
+  const months=[...new Set(recs.map(r=>recDay(r).slice(0,7)).filter(Boolean))].sort().reverse();
+  if(st.month&&!months.includes(st.month)) st.month="";
+  const days=[...new Set(recs.filter(r=>!st.month||recDay(r).startsWith(st.month)).map(r=>recDay(r).slice(8,10)).filter(Boolean))].sort();
+  if(st.day&&!days.includes(st.day)) st.day="";
+  const mLabel=m=>{const [y,mm]=m.split("-");return `${MONTHS[Number(mm)-1]||mm} ${y}`};
+  const chip=(grp,val,lab,on)=>`<button type="button" class="chipbtn" data-${grp}="${esc(val)}" aria-pressed="${on}">${esc(lab)}</button>`;
+  return `<div class="chiprow"><span class="chiplab">Month</span>${chip("dm","","All months",!st.month)}${months.map(m=>chip("dm",m,mLabel(m),st.month===m)).join("")}</div>
+   <div class="chiprow"><span class="chiplab">Day</span>${chip("dday","","All days",!st.day)}${days.map(d=>chip("dday",d,String(Number(d)),st.day===d)).join("")}</div>`;
+}
+function tableAoa(tbl){
+  const out=[];
+  tbl.querySelectorAll("tr").forEach(tr=>{
+    const row=[];
+    tr.querySelectorAll("th,td").forEach(c=>{
+      let t=c.innerText.replace(/\s*\n\s*No response reported/," (no response reported)").replace(/\s+/g," ").trim();
+      const v=(c.classList.contains("num")&&t!=="")? Number(t.replace(/,/g,"")) : t;
+      row.push(Number.isNaN(v)?t:v);
+      const span=Number(c.getAttribute("colspan")||1); for(let i=1;i<span;i++) row.push("");
+    });
+    out.push(row);
+  });
+  return out;
 }
 function wireDash(kind,draw){
   const st=DASH[kind];
+  document.querySelectorAll("[data-dm]").forEach(b=>b.onclick=()=>{st.month=b.dataset.dm;st.day="";render()});
+  document.querySelectorAll("[data-dday]").forEach(b=>b.onclick=()=>{st.day=b.dataset.dday;render()});
+  $("#dExport").onclick=async()=>{
+    const tbl=$("#dBody table"); if(!tbl){ toast("Nothing to export for this selection."); return; }
+    const viewName=($("#dBody .view-title")?.textContent||"Report").trim();
+    const mL=st.month?(()=>{const [y,mm]=st.month.split("-");return `${MONTHS[Number(mm)-1]} ${y}`})():"";
+    const sel=[st.region&&rName(st.region),st.district&&dName(st.district),mL,st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
+    const title=kind==="impact"?"Impact Report":"Response Report";
+    const about=[["El Niño - "+title+" - "+viewName],["Filters",sel],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
+    const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
+    await exportXlsx(`El_Nino_${title.replace(/ /g,"_")}_${viewName.replace(/[^A-Za-z0-9]+/g,"_")}${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.xlsx`, viewName.slice(0,31), tableAoa(tbl), about);
+  };
   $("#dReg").onchange=e=>{st.region=e.target.value;st.district="";render()};
   $("#dDist").onchange=e=>{st.district=e.target.value;draw()};
-  $("#dRefresh").onclick=()=>{st.region="";st.district="";loadData();render();toast("Filters cleared · showing latest data")};
+  $("#dRefresh").onclick=()=>{st.region="";st.district="";st.month="";st.day="";loadData();render();toast("Filters cleared · showing latest data")};
   document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{st.view=b.dataset.v;render()});
   draw();
 }
-const inFilter=(st,rec)=>allowed(rec.affected_district)&&(!st.region||rec.affected_region===st.region||DIST[rec.affected_district]?.r===st.region)&&(!st.district||rec.affected_district===st.district);
+const inFilter=(st,rec)=>allowed(rec.affected_district)&&(!st.month||recDay(rec).startsWith(st.month))&&(!st.day||recDay(rec).slice(8,10)===st.day)&&(!st.region||rec.affected_region===st.region||DIST[rec.affected_district]?.r===st.region)&&(!st.district||rec.affected_district===st.district);
 const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}</div></div>`;
 
 /* ---------- 5/6. Daily reports ---------- */
