@@ -155,6 +155,8 @@ tbody tr:nth-child(even) td.stick{background:color-mix(in srgb,var(--sunk) 45%,v
 table.daily td{white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}
 table.daily td.longtxt{white-space:pre-wrap;min-width:360px;max-width:560px}
 tr.subtotal td{background:var(--flood-soft)!important;font-weight:600;border-bottom:2px solid var(--line)}
+.editbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--flood-soft);border:1px solid var(--flood);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:14px}
+tr.editing td{background:var(--flood-soft)!important}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -356,6 +358,7 @@ function renderImpactEntry(){
    <div class="page-head"><div><div class="eyebrow">2 · Flood Impact entry</div><h1>El Niño | Impact Reporting Form</h1>
    <div class="sub">Record the first traceable picture of the crisis within 24 hours. Do not record priority needs, response activities, people reached or delivered quantities. Report ONE settlement or site per record.</div></div></div>
    <div id="leaveBox" hidden></div>
+   <div id="editBanner" class="editbar" hidden><span>Editing saved record: <b id="editWhat"></b>. Change what you need, then press <b>Save changes</b>.</span><button class="btn sm" type="button" id="editCancel">Cancel edit</button></div>
    <form id="impForm" novalidate>
    <fieldset><legend>Impact Report</legend><div class="grid2">
      <div class="f"><label class="req" for="reporting_organisation">Reporting organisation</label><input type="text" id="reporting_organisation" name="reporting_organisation" data-req></div>
@@ -399,8 +402,8 @@ function renderImpactEntry(){
    </fieldset>
    <div id="impMsg" class="msg" hidden></div>
    <div class="actions">
-     <button class="btn primary" type="submit" data-mode="done">Submit</button>
-     <button class="btn" type="submit" data-mode="again">Save and add another location</button>
+     <button class="btn primary" type="submit" data-mode="done" id="impSubmit">Submit</button>
+     <button class="btn" type="submit" data-mode="again" id="impAgain">Save and add another location</button>
      <button class="btn ghost" type="button" id="impReset">Clear form</button>
      <span id="editTag" class="pill new" hidden>Editing a saved record</span>
    </div>
@@ -461,15 +464,19 @@ function loadImpactIntoForm(id){
     els.forEach(el=>{ if(el.type==="radio") el.checked=el.value===v; else if(el.type==="checkbox") el.checked=Array.isArray(v)&&v.includes(el.value); else el.value=v??""; });
   }
   ["reported_access_constraints","main_source"].forEach(k=>{ if(!r[k]) f.querySelectorAll(`[name="${k}"]`).forEach(el=>el.checked=false) });
-  f.syncAccess(); $("#editTag").hidden=false; f.scrollIntoView({behavior:"smooth"});
+  f.syncAccess(); $("#editTag").hidden=false;
+  $("#editWhat").textContent=`${r.affected_settlement||"(no name)"}, ${dName(r.affected_district)} · ${r.report_reference||(r._savedAt||"").slice(0,10)}`;
+  $("#editBanner").hidden=false; $("#impSubmit").textContent="Save changes"; $("#impAgain").hidden=true;
+  $("#editCancel").onclick=()=>{editingImpact=null;S.dirty=false;renderImpactEntry()};
+  renderImpactList(); $("#editBanner").scrollIntoView({behavior:"smooth",block:"start"});
 }
 function renderImpactList(){
   const host=$("#impList"); if(!host) return;
   const rows=[...store.impact.entries()].filter(([,r])=>allowed(r.affected_district)).sort((a,b)=>(b[1]._savedAt||"").localeCompare(a[1]._savedAt||""));
   if(!rows.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No impact records yet</b>Records you submit above for your districts will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
-  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th>Reference date</th><th>District</th><th>Settlement / site</th><th>Organisation</th><th class="num">Affected</th><th class="num">Deaths</th><th>Status</th><th></th></tr></thead><tbody>
-  ${rows.map(([id,r])=>`<tr><td>${esc(r.report_reference||(r._savedAt||"").slice(0,10))}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.reporting_organisation)}</td><td class="num">${fmt(num(r.people_affected))}</td><td class="num">${fmt(num(r.deaths))}</td><td>${esc(label(EVENT,r.event_status))}</td>
-  <td style="white-space:nowrap"><button class="btn sm" type="button" data-edit="${id}">Edit</button>${isSuper()?` <span data-delbox="${id}"><button class="btn sm ghost" type="button" data-del="${id}">Delete</button></span>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th class="stick"></th><th>Reference date</th><th>District</th><th>Settlement / site</th><th>Organisation</th><th class="num">Affected</th><th class="num">Deaths</th><th>Status</th><th></th></tr></thead><tbody>
+  ${rows.map(([id,r])=>`<tr class="${id===editingImpact?"editing":""}"><td class="stick"><button class="btn sm primary" type="button" data-edit="${id}" aria-label="Edit ${esc(r.affected_settlement)}">${id===editingImpact?"Editing…":"Edit"}</button></td><td>${esc(r.report_reference||(r._savedAt||"").slice(0,10))}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.reporting_organisation)}</td><td class="num">${fmt(num(r.people_affected))}</td><td class="num">${fmt(num(r.deaths))}</td><td>${esc(label(EVENT,r.event_status))}</td>
+  <td style="white-space:nowrap">${isSuper()?`<span data-delbox="${id}"><button class="btn sm ghost" type="button" data-del="${id}">Delete</button></span>`:""}</td></tr>`).join("")}</tbody></table></div>`;
   host.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>loadImpactIntoForm(b.dataset.edit));
   host.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const box=host.querySelector(`[data-delbox="${b.dataset.del}"]`);box.innerHTML=`<span class="confirm">Delete? <button class="btn sm danger" type="button">Yes</button><button class="btn sm ghost" type="button">No</button></span>`;const [y,n]=box.querySelectorAll("button");y.onclick=async()=>{try{await deleteDoc("impact",b.dataset.del);toast("Record deleted");renderImpactList()}catch(e){toast("Couldn't delete: "+(e.message||e.code))}};n.onclick=renderImpactList;});
 }
