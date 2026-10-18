@@ -713,7 +713,7 @@ function tableAoa(tbl){
   tbl.querySelectorAll("tr").forEach(tr=>{
     const row=[];
     tr.querySelectorAll("th,td").forEach(c=>{
-      let t=c.innerText.replace(/\s*\n\s*No response reported/," (no response reported)").replace(/\s+/g," ").trim();
+      let t=c.innerText.replace(/\s+/g," ").trim();
       const v=(c.classList.contains("num")&&t!=="")? Number(t.replace(/,/g,"")) : t;
       row.push(Number.isNaN(v)?t:v);
       const span=Number(c.getAttribute("colspan")||1); for(let i=1;i<span;i++) row.push("");
@@ -899,17 +899,17 @@ function drawResponse(){
   recs.forEach(r=>{const k=keyOf(r);const g=groups.get(k)||{district:r.affected_district,loc:(r.affected_settlement||"").trim(),v:{},o:{}};
     g.n=(g.n||0)+1; RESP_IND.forEach(([f])=>{g.v[f]=(g.v[f]||0)+num(r[f]); if(num(r[f])>0){(g.o[f]=g.o[f]||new Set()).add(r.Reporting_Organisation_Name)}}); groups.set(k,g);});
   impVill.forEach(r=>{const k=keyOf(r); if(!groups.has(k)){const v={};RESP_IND.forEach(([f])=>v[f]=0);groups.set(k,{district:r.affected_district,loc:r.affected_settlement.trim(),v,o:{},n:0});}});
-  const gap=r=>r.n?"":`<br><span class="pill">No response reported</span>`;
+  const gap=r=>"";
   const nGap=[...groups.values()].filter(g=>!g.n).length;
   const rows=[...groups.values()].sort((a,b)=>dName(a.district).localeCompare(dName(b.district))||a.loc.localeCompare(b.loc));
   if(st.view==="partners"){
-    body.innerHTML=`<div class="view-title">Partner Mapping</div><div class="meta">Organisations reporting people reached, by service and village${nGap?` · ${nGap} village${nGap>1?"s":""} with no response reported yet`:""}</div>
+    body.innerHTML=`<div class="view-title">Partner Mapping</div><div class="meta">Organisations reporting people reached, by service and village</div>
     <div class="tbl-wrap"><table><thead><tr><th class="stick">District</th><th>Village settlement</th>${RESP_IND.map(i=>`<th title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}</tr></thead>
     <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="orgs">${r.o[k]?esc([...r.o[k]].sort().join(", ")):""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     return;
   }
   const tot={}; RESP_IND.forEach(([k])=>tot[k]=rows.reduce((s,r)=>s+r.v[k],0));
-  body.innerHTML=`<div class="view-title">Village Settlement Summary</div><div class="meta">${rows.length} village${rows.length>1?"s":""} from impact and response reports · ${recs.length} response entr${recs.length===1?"y":"ies"}${nGap?` · ${nGap} with no response reported yet`:""}</div>
+  body.innerHTML=`<div class="view-title">Village Settlement Summary</div><div class="meta">${rows.length} village${rows.length>1?"s":""} from impact and response reports · ${recs.length} response entr${recs.length===1?"y":"ies"}</div>
   <div class="tbl-wrap"><table>${head(`<th class="stick">District</th><th>Village settlement</th>`)}
   <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(r.v[k])}</td>`).join("")}</tr>`).join("")}</tbody>
   <tfoot><tr><td class="stick">Total</td><td></td>${RESP_IND.map(([k])=>`<td class="num">${fmt(tot[k])}</td>`).join("")}</tr></tfoot></table></div>`;
