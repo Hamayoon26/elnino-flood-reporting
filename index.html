@@ -747,7 +747,7 @@ const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}<
 
 /* ---------- 5/6. Daily reports ---------- */
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAILY={impact:{region:"",district:"",month:"",day:""},response:{region:"",district:"",month:"",day:""},qualitative:{region:"",district:"",month:"",day:""}};
+const DAILY={impact:{region:"",district:"",month:"",day:"",view:"detail"},response:{region:"",district:"",month:"",day:"",view:"detail"},qualitative:{region:"",district:"",month:"",day:"",view:"detail"}};
 const DAILY_META={impact:["6","Daily Impact Report","Daily_Impact","Daily impact"],response:["7","Daily Response Report","Daily_Response","Daily response"],qualitative:["8","Daily Qualitative Report","Daily_Qualitative","Daily qualitative"]};
 const DAILY_COLS={
   qualitative:[["_date","Date"],["affected_region","Region","r"],["affected_district","District","d"],["reporting_organisation","Reporting organisation"],["abc_role","ABC role",ABC_ROLE],
@@ -793,6 +793,7 @@ function renderDaily(kind){
      <div class="f"><label for="yReg">Region</label><select id="yReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
      <div class="f"><label for="yDist">District</label><select id="yDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
      <button class="btn" type="button" id="yReset">Clear filters</button>
+     ${kind==="qualitative"?"":`<div class="seg" role="group" aria-label="Report view"><button type="button" data-yv="detail" aria-pressed="${st.view!=="summary"}">All records</button><button type="button" data-yv="summary" aria-pressed="${st.view==="summary"}">Summary</button></div>`}
      <button class="btn primary" type="button" id="yExport" disabled>Export to Excel</button>
    </div>
    <div class="chiprow"><span class="chiplab">Month</span>${chip("m","","All months",!st.month)}${months.map(m=>chip("m",m,mLabel(m),st.month===m)).join("")}</div>
@@ -803,6 +804,7 @@ function renderDaily(kind){
   $("#yReset").onclick=()=>{Object.assign(st,{region:"",district:"",month:"",day:""});if(typeof loadData==="function")loadData();render()};
   document.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{st.month=b.dataset.m;st.day="";render()});
   document.querySelectorAll("[data-dd]").forEach(b=>b.onclick=()=>{st.day=b.dataset.dd;render()});
+  document.querySelectorAll("[data-yv]").forEach(b=>b.onclick=()=>{st.view=b.dataset.yv;render()});
   const recs=all.filter(r=>inRD(r)&&(!st.month||r._date.startsWith(st.month))&&(!st.day||r._date.slice(8,10)===st.day));
   const body=$("#yBody");
   if(!recs.length){ body.innerHTML=emptyBox("No records for this selection", store.mode==="loading"?"Loading data…":"Try another region, district, month or day."); return; }
@@ -814,6 +816,28 @@ function renderDaily(kind){
   const totalRow=(cls,lab,rs)=> firstNum<0 ? `<tr class="${cls}"><td class="stick" colspan="${cols.length}">${esc(lab)}</td></tr>`
     : `<tr class="${cls}"><td class="stick" colspan="${firstNum}">${esc(lab)}</td>${cols.slice(firstNum).map(c=>c[2]==="n"?`<td class="num">${fmt(sum(rs,c[0]))}</td>`:"<td></td>").join("")}</tr>`;
   const sel=[st.region&&rName(st.region),st.district&&dName(st.district),st.month&&mLabel(st.month),st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
+  if(st.view==="summary" && kind!=="qualitative"){
+    const numCols=cols.filter(c=>c[2]==="n");
+    const setOf=(rs,k)=>new Set(rs.map(r=>String(r[k]||"").trim().toLowerCase()).filter(Boolean)).size;
+    const head=["Region","District","Records","Settlements"].concat(kind==="response"?["Organisations"]:[]).concat(numCols.map(c=>c[1]));
+    const line=(region,lab,rs)=>[region,lab,rs.length,setOf(rs,"affected_settlement")].concat(kind==="response"?[setOf(rs,"Reporting_Organisation_Name")]:[]).concat(numCols.map(c=>sum(rs,c[0])));
+    const order=[...dists].sort((a,b)=>rName(DIST[a]?.r).localeCompare(rName(DIST[b]?.r))||dName(a).localeCompare(dName(b)));
+    const rowsS=order.map(d=>line(rName(DIST[d]?.r),dName(d),byD.get(d)));
+    const tot=line("","Total ("+dists.length+" district"+(dists.length>1?"s":"")+")",recs);
+    tot[3]=rowsS.reduce((a,r)=>a+r[3],0);
+    const cell=(v,i)=>i<2?`<td class="${i===0?"stick":""}">${esc(v)}</td>`:`<td class="num">${fmt(v)||(v===0?"0":"")}</td>`;
+    body.innerHTML=`<div class="view-title">Summary by district</div><div class="meta">${esc(sel)} · ${recs.length} ${recWord(kind)[recs.length>1?1:0]} in ${dists.length} district${dists.length>1?"s":""}</div>
+    <div class="tbl-wrap"><table class="daily"><thead><tr>${head.map((h,i)=>`<th class="${i===0?"stick ":""}${i>=2?"num":""}">${esc(h)}</th>`).join("")}</tr></thead>
+    <tbody>${rowsS.map(r=>`<tr>${r.map(cell).join("")}</tr>`).join("")}</tbody>
+    <tfoot><tr>${tot.map(cell).join("")}</tr></tfoot></table></div>`;
+    const ex=$("#yExport"); ex.disabled=false;
+    ex.onclick=async()=>{
+      const about=[["El Niño - "+title+" - Summary by district"],["Filters",sel],["Records",recs.length],["Districts",dists.length],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
+      const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
+      await exportXlsx(`El_Nino_${fileKey}_Summary${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.xlsx`, "Summary by district", [head,...rowsS,tot], about);
+    };
+    return;
+  }
   body.innerHTML=`<div class="meta">${esc(sel)} · ${recs.length} ${recWord(kind)[recs.length>1?1:0]} in ${dists.length} district${dists.length>1?"s":""}</div>
   <div class="tbl-wrap"><table class="daily"><thead><tr>${cols.map((c,i)=>`<th class="${i===0?"stick ":""}${c[2]==="n"?"num":""}">${esc(c[1])}</th>`).join("")}</tr></thead>
   <tbody>${dists.map(d=>{const rs=byD.get(d).sort((a,b)=>b._date.localeCompare(a._date)||(a.affected_settlement||"").localeCompare(b.affected_settlement||""));
