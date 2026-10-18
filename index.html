@@ -882,8 +882,7 @@ function renderResponseReport(){
 function drawResponse(){
   const st=DASH.response; const recs=[...store.response.values()].filter(r=>inFilter(st,r));
   const body=$("#dBody");
-  const impVill=[...store.impact.values()].filter(r=>inFilter(st,r)&&(r.affected_settlement||"").trim());
-  if(!recs.length && (st.view==="orgs"||!impVill.length)){ body.innerHTML=emptyBox("No response reports for this selection", store.mode==="loading"?"Loading data…":"Rows saved through Flood Response entry for your districts appear here."); return; }
+  if(!recs.length){ body.innerHTML=emptyBox("No response reports for this selection", store.mode==="loading"?"Loading data…":"Rows saved through Flood Response entry for your districts appear here."); return; }
   const keyOf=r=>r.affected_district+"|"+(r.affected_settlement||"").trim().toLowerCase();
   const head=(extra)=>`<thead><tr>${extra}${RESP_IND.map(i=>`<th class="num" title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}</tr></thead>`;
   if(st.view==="orgs"){
@@ -898,7 +897,6 @@ function drawResponse(){
   const groups=new Map();
   recs.forEach(r=>{const k=keyOf(r);const g=groups.get(k)||{district:r.affected_district,loc:(r.affected_settlement||"").trim(),v:{},o:{}};
     g.n=(g.n||0)+1; RESP_IND.forEach(([f])=>{g.v[f]=(g.v[f]||0)+num(r[f]); if(num(r[f])>0){(g.o[f]=g.o[f]||new Set()).add(r.Reporting_Organisation_Name)}}); groups.set(k,g);});
-  impVill.forEach(r=>{const k=keyOf(r); if(!groups.has(k)){const v={};RESP_IND.forEach(([f])=>v[f]=0);groups.set(k,{district:r.affected_district,loc:r.affected_settlement.trim(),v,o:{},n:0});}});
   const gap=r=>"";
   const nGap=[...groups.values()].filter(g=>!g.n).length;
   const rows=[...groups.values()].sort((a,b)=>dName(a.district).localeCompare(dName(b.district))||a.loc.localeCompare(b.loc));
@@ -909,7 +907,7 @@ function drawResponse(){
     return;
   }
   const tot={}; RESP_IND.forEach(([k])=>tot[k]=rows.reduce((s,r)=>s+r.v[k],0));
-  body.innerHTML=`<div class="view-title">Village Settlement Summary</div><div class="meta">${rows.length} village${rows.length>1?"s":""} from impact and response reports · ${recs.length} response entr${recs.length===1?"y":"ies"}</div>
+  body.innerHTML=`<div class="view-title">Village Settlement Summary</div><div class="meta">${rows.length} village${rows.length>1?"s":""} with a response · ${recs.length} response entr${recs.length===1?"y":"ies"}</div>
   <div class="tbl-wrap"><table>${head(`<th class="stick">District</th><th>Village settlement</th>`)}
   <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(r.v[k])}</td>`).join("")}</tr>`).join("")}</tbody>
   <tfoot><tr><td class="stick">Total</td><td></td>${RESP_IND.map(([k])=>`<td class="num">${fmt(tot[k])}</td>`).join("")}</tr></tfoot></table></div>`;
