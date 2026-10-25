@@ -168,6 +168,7 @@ table.qtable td:last-child{font-size:13.5px}
 th.vcol,td.vcol{min-width:293px!important}
 table.implist th.setl,table.implist td.setl{min-width:296px}
 th.svill,td.svill{min-width:430px}
+table.psm td.orgs{min-width:150px;font-size:12.5px}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -285,7 +286,7 @@ const myDistricts=r=>[...S.districts].filter(c=>!r||DIST[c]?.r===r).sort((a,b)=>
 const isSuper=()=>S.types.has("SUPER");
 const canDo={impactEntry:()=>S.types.has("IM"),responseReport:()=>S.types.has("IM")||S.types.has("VIEW"),responseEntry:()=>S.types.has("RM"),impactReport:()=>S.types.has("RM")||S.types.has("VIEW"),
   qualEntry:()=>S.types.has("IM"),
-  dailyImpact:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyQual:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyResponse:()=>S.types.has("SUPER")||S.types.has("VIEW")};
+  dailyImpact:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyQual:()=>S.types.has("SUPER")||S.types.has("VIEW"),dailyResponse:()=>S.types.has("SUPER")||S.types.has("VIEW"),partnerSummary:()=>S.types.has("IM")||S.types.has("VIEW")};
 
 function go(view){
   if(S.dirty && view!==S.view && !go.force){ pendingLeave(view); return; }
@@ -296,7 +297,7 @@ function pendingLeave(view){
   host.hidden=false; host.innerHTML=`<div class="msg bad">You have unsaved changes. <button class="btn sm" id="lvYes" type="button">Leave without saving</button> <button class="btn sm ghost" id="lvNo" type="button">Stay</button></div>`;
   $("#lvYes").onclick=()=>{go.force=true;go(view)}; $("#lvNo").onclick=()=>{host.hidden=true};
 }
-function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="dailyImpact"||S.view==="dailyResponse"||S.view==="dailyQual"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="qualEntry") renderQualList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
+function rerender(){ if(S.view==="impactReport"||S.view==="responseReport"||S.view==="dailyImpact"||S.view==="dailyResponse"||S.view==="dailyQual"||S.view==="partnerSummary"||S.view==="home") render(); else if(S.view==="impactEntry") renderImpactList(); else if(S.view==="qualEntry") renderQualList(); else if(S.view==="responseEntry"){ if(!S.dirty) render(); else renderRespList(); } }
 
 $("#goHome").onclick=()=>go("home");
 $("#lock").onclick=()=>{ go.force=true; stopSync(); S.pin=null; S.types=new Set(); S.districts=new Set(); go("pin"); };
@@ -309,7 +310,7 @@ function render(){
     $("#who").innerHTML=`Code <b aria-label="hidden code">${masked()}</b> · ${n>6? n+" districts" : esc(list.join(", "))}`;
   }
   if(S.view!=="pin" && (!S.pin || (canDo[S.view] && !canDo[S.view]()))) S.view = S.pin? "home":"pin";
-  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response"),dailyQual:()=>renderDaily("qualitative"),qualEntry:renderQualEntry})[S.view]();
+  ({pin:renderPin,home:renderHome,impactEntry:renderImpactEntry,responseEntry:renderResponseEntry,impactReport:renderImpactReport,responseReport:renderResponseReport,dailyImpact:()=>renderDaily("impact"),dailyResponse:()=>renderDaily("response"),dailyQual:()=>renderDaily("qualitative"),qualEntry:renderQualEntry,partnerSummary:renderPartnerSummary})[S.view]();
 }
 
 /* ---------- PIN page ---------- */
@@ -346,7 +347,8 @@ function renderHome(){
     ["responseReport","5","Flood Response Report","Village summary, partner mapping and organisation entries.","response"],
     ["dailyImpact","6","Daily Impact Report","Every impact record by region, district, month and day, with district subtotals.","impact"],
     ["dailyResponse","7","Daily Response Report","Every response entry by region, district, month and day, with district subtotals.","response"],
-    ["dailyQual","8","Daily Qualitative Report","Every qualitative entry by region, district, month and day.","impact"]];
+    ["dailyQual","8","Daily Qualitative Report","Every qualitative entry by region, district, month and day.","impact"],
+    ["partnerSummary","9","Partner Summary Mapping","Which organisations are active in each sector, district by district.","response"]];
   const typeTxt = isSuper() ? "Super code (all functions and data)" : S.types.has("VIEW") ? "Reporting code (reports only)" : S.types.has("IM")&&S.types.has("RM") ? "Coordination code (all functions)" : S.types.has("IM") ? "IMPACT Kobo and Response Power BI code" : "Response Kobo and IMPACT Power BI code";
   const rows=[...S.districts].map(c=>`<span class="chip">${esc(dName(c))} · ${esc(rName(DIST[c]?.r))}</span>`).join("");
   $("#app").innerHTML=`<div class="wrap">
@@ -753,6 +755,57 @@ function wireDash(kind,draw){
 }
 const inFilter=(st,rec)=>allowed(rec.affected_district)&&(!st.month||recDay(rec).startsWith(st.month))&&(!st.day||recDay(rec).slice(8,10)===st.day)&&(!st.region||rec.affected_region===st.region||DIST[rec.affected_district]?.r===st.region)&&(!st.district||rec.affected_district===st.district);
 const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}</div></div>`;
+
+/* ---------- 9. Partner Summary Mapping (district level) ---------- */
+const PSM={region:"",district:"",month:"",day:""};
+const SECTORS=[...new Set(RESP_IND.map(i=>i[3]))];
+function renderPartnerSummary(){
+  const st=PSM; const regs=myRegions();
+  $("#app").innerHTML=`<div class="wrap">
+   <div class="dash-head"><div><div class="eyebrow">9 · Partner Summary Mapping</div><h1><span class="draft">DRAFT</span> - El Niño - Partner Summary Mapping</h1></div>
+   <div class="disclaimer"><b>Disclaimer</b>: The information presented is preliminary and remains subject to verification and updates as new information becomes available. This dashboard is intended to facilitate access to and visualization of available information for ABCs and partners. For official datasets or validated figures, please contact the relevant ABC or OCHA office.</div></div>
+   <div class="toolbar">
+     <div class="f"><label for="pReg">Region</label><select id="pReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
+     <div class="f"><label for="pDist">District</label><select id="pDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
+     <button class="btn" type="button" id="pRefresh" title="Clear filters and reload the latest data">Refresh</button>
+     <button class="btn primary" type="button" id="pExport">Export to Excel</button>
+   </div>
+   ${dateChips("response",st)}
+   <div id="pBody"></div></div>`;
+  $("#pReg").onchange=e=>{st.region=e.target.value;st.district="";render()};
+  $("#pDist").onchange=e=>{st.district=e.target.value;render()};
+  $("#pRefresh").onclick=()=>{Object.assign(st,{region:"",district:"",month:"",day:""});if(typeof loadData==="function")loadData();render();toast("Filters cleared · showing latest data")};
+  document.querySelectorAll("[data-dm]").forEach(b=>b.onclick=()=>{st.month=b.dataset.dm;st.day="";render()});
+  document.querySelectorAll("[data-dday]").forEach(b=>b.onclick=()=>{st.day=b.dataset.dday;render()});
+  const recs=[...store.response.values()].filter(r=>inFilter(st,r));
+  const body=$("#pBody");
+  if(!recs.length){ body.innerHTML=emptyBox("No response reports for this selection", store.mode==="loading"?"Loading data…":"Organisations appear here once responses are submitted for your districts."); $("#pExport").onclick=()=>toast("Nothing to export for this selection."); return; }
+  const byD=new Map();
+  recs.forEach(r=>{
+    const d=r.affected_district; if(!byD.has(d)) byD.set(d,{all:new Set(),sec:{}});
+    const g=byD.get(d); const org=(r.Reporting_Organisation_Name||"").trim(); if(!org) return;
+    RESP_IND.forEach(([f,,,sec])=>{ if(num(r[f])>0){ (g.sec[sec]=g.sec[sec]||new Set()).add(org); g.all.add(org); } });
+  });
+  const dists=[...byD.keys()].sort((a,b)=>rName(DIST[a]?.r).localeCompare(rName(DIST[b]?.r))||dName(a).localeCompare(dName(b)));
+  const list=set=>set&&set.size?[...set].sort((a,b)=>a.localeCompare(b)).join(", "):"";
+  const allOrgs=new Set(); dists.forEach(d=>byD.get(d).all.forEach(o=>allOrgs.add(o)));
+  const secCount=sec=>new Set(dists.flatMap(d=>[...(byD.get(d).sec[sec]||[])])).size;
+  const mL=st.month?(()=>{const [y,mm]=st.month.split("-");return `${MONTHS[Number(mm)-1]} ${y}`})():"";
+  const sel=[st.region&&rName(st.region),st.district&&dName(st.district),mL,st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
+  body.innerHTML=`<div class="view-title">Partner Summary Mapping by district</div>
+  <div class="meta">${esc(sel)} · ${dists.length} district${dists.length>1?"s":""} · ${allOrgs.size} organisation${allOrgs.size===1?"":"s"} reporting people reached</div>
+  <div class="tbl-wrap"><table class="psm"><thead><tr><th class="stick">Region</th><th>District</th>${SECTORS.map(s=>`<th>${esc(s)}</th>`).join("")}<th class="num">Organisations</th></tr></thead>
+  <tbody>${dists.map(d=>{const g=byD.get(d);return `<tr><td class="stick">${esc(rName(DIST[d]?.r))}</td><td>${esc(dName(d))}</td>${SECTORS.map(s=>`<td class="orgs">${esc(list(g.sec[s]))}</td>`).join("")}<td class="num">${g.all.size}</td></tr>`}).join("")}</tbody>
+  <tfoot><tr><td class="stick">Total</td><td>${dists.length} district${dists.length>1?"s":""}</td>${SECTORS.map(s=>{const n=secCount(s);return `<td>${n?n+" organisation"+(n>1?"s":""):""}</td>`}).join("")}<td class="num">${allOrgs.size}</td></tr></tfoot></table></div>`;
+  $("#pExport").onclick=async()=>{
+    const aoa=[["Region","District",...SECTORS,"Organisations"]];
+    dists.forEach(d=>{const g=byD.get(d); aoa.push([rName(DIST[d]?.r),dName(d),...SECTORS.map(s=>list(g.sec[s])),g.all.size]);});
+    aoa.push(["Total",dists.length+" districts",...SECTORS.map(s=>secCount(s)||""),allOrgs.size]);
+    const about=[["El Niño - Partner Summary Mapping by district"],["Filters",sel],["Districts",dists.length],["Organisations",allOrgs.size],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["An organisation is listed under a sector when it reported people reached for any indicator in that sector."],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
+    const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
+    await exportXlsx(`El_Nino_Partner_Summary_Mapping${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.xlsx`,"Partner summary",aoa,about);
+  };
+}
 
 /* ---------- 5/6. Daily reports ---------- */
 const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];

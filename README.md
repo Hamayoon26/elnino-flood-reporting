@@ -10,6 +10,7 @@ A web app for Area-Based Coordination forums in Somalia. People enter a district
 6. **Daily Impact Report**: every impact record, filtered by region, district, month and day, with a subtotal per district
 7. **Daily Response Report**: the same for response entries
 8. **Daily Qualitative Report**: every qualitative entry, filtered by region, district, month and day
+9. **Partner Summary Mapping**: for each district, the organisations active in each sector (Food Security, Nutrition, Multipurpose Cash, WASH, Health, Protection, Shelter and NFI, Education)
 
 All five reports have Month and Day filters and an Export to Excel button.
 
@@ -17,10 +18,10 @@ Code types (column B of the `Codes` tab):
 
 | Type | Opens | Notes |
 |---|---|---|
-| `IM` | 1 Daily Qualitative entry, 2 Flood Impact entry, 5 Flood Response Report | Can edit impact and qualitative records, cannot delete |
+| `IM` | 1 Daily Qualitative entry, 2 Flood Impact entry, 5 Flood Response Report, 9 Partner Summary Mapping | Can edit impact and qualitative records, cannot delete |
 | `RM` | 3 Flood Response entry, 4 Flood Impact Report | Cannot edit or delete from the submitted list |
-| `VIEW` | 4 to 8 (reports only) | Cannot enter or change data |
-| `ALL` | Everything, 1 to 8 | Super code: the only type that can delete, and edit from the submitted responses list |
+| `VIEW` | 4 to 9 (reports only) | Cannot enter or change data |
+| `ALL` | Everything, 1 to 9 | Super code: the only type that can delete, and edit from the submitted responses list |
 
 Every code only sees and changes data for its own districts.
 
