@@ -136,8 +136,8 @@ tbody tr:nth-child(even) td.stick{background:color-mix(in srgb,var(--sunk) 45%,v
 .dash-head{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start;margin-bottom:14px}
 .dash-head h1{font-size:clamp(24px,3.2vw,34px)}
 .draft{color:var(--bad);font-weight:700}
-.disclaimer{font-size:12.5px;color:var(--muted);border-left:3px solid var(--line);padding-left:12px}
-.disclaimer b{color:var(--ink)}
+.disclaimer{font-size:12.5px;color:var(--bad);border-left:3px solid var(--bad);padding-left:12px}
+.disclaimer b{color:var(--bad)}
 .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:12px}
 .toolbar .f{width:min(100%,240px)}
 .seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
@@ -586,6 +586,7 @@ function renderResponseEntry(){
   $("#app").innerHTML=`<div class="wrap">
    <div class="page-head"><div><div class="eyebrow">3 · Flood Response entry</div><h1>El Niño | Partner Response Report</h1>
    <div class="sub">One row per affected village or site from the impact reports for your districts. Enter your organisation name, fill in the rows where you responded, then press Submit. Blank rows are not submitted. Submitted rows are listed below the table; submitting the same village again updates your earlier entry.</div></div></div>
+   <div class="disclaimer" style="margin:-6px 0 16px;max-width:110ch"><b>Disclaimer</b>: The information presented is preliminary and remains subject to verification and updates as new information becomes available. This dashboard is intended to facilitate access to and visualization of available information for ABCs and partners. For official datasets or validated figures, please contact the relevant ABC or OCHA office.</div>
    <div id="leaveBox" hidden></div>
    <fieldset><legend>Response Report</legend><div class="grid2">
      <div class="f"><label class="req" for="org">Reporting Organisation Name</label><input type="text" id="org" list="orgList" value="${esc(respOrg)}" placeholder="Your organisation"><datalist id="orgList">${orgs.map(o=>`<option value="${esc(o)}">`).join("")}</datalist><span class="hint">Your organisation's earlier entries load into the table when you enter its name.</span></div>
