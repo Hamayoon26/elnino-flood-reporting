@@ -122,8 +122,9 @@ tbody tr:nth-child(even) td.stick{background:color-mix(in srgb,var(--sunk) 45%,v
 .entry input[type=number]{width:84px;padding:5px 6px}
 .entry input[type=date]{width:136px;padding:5px 6px}
 .entry select{width:150px;padding:5px 6px}
+.entry select[data-f=response_status]{width:112px}
 .entry input[type=text]{width:160px;padding:5px 6px}
-.entry .loc{min-width:180px;max-width:220px}
+.entry .loc{min-width:280px;max-width:340px}
 .entry .loc b{display:block;font-size:13px}
 .entry .loc small{color:var(--muted)}
 .entry tr.dirty td.stick{box-shadow:inset 4px 0 0 var(--flood)}
@@ -157,6 +158,13 @@ table.daily td.longtxt{white-space:pre-wrap;min-width:360px;max-width:560px}
 tr.subtotal td{background:var(--flood-soft)!important;font-weight:600;border-bottom:2px solid var(--line)}
 .editbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--flood-soft);border:1px solid var(--flood);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:14px}
 tr.editing td{background:var(--flood-soft)!important}
+.qwide{width:120%;margin-left:-10%}
+@media (max-width:1100px){.qwide{width:100%;margin-left:0}}
+table.qtable{table-layout:fixed;min-width:860px}
+table.qtable td,table.qtable th{overflow-wrap:break-word;font-size:12.5px}
+table.qtable td:nth-child(2),table.qtable td:nth-child(7){white-space:nowrap}
+table.qtable td:last-child{font-size:13.5px}
+th.vcol,td.vcol{min-width:195px!important}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -510,7 +518,7 @@ function renderQualEntry(){
    <div class="actions"><button class="btn primary" type="submit">Submit</button><button class="btn ghost" type="button" id="qReset">Clear form</button><span id="qEditTag" class="pill new" hidden>Editing a saved entry</span></div>
    </form>
    <h2 style="margin:34px 0 10px;font-size:22px">Saved qualitative entries for your districts</h2>
-   <div id="qList"></div>
+   <div id="qList" class="qwide"></div>
   </div>`;
   const f=$("#qForm");
   const fillDist=()=>{f.affected_district.innerHTML=`<option value="">Select district</option>`+myDistricts(f.affected_region.value).map(c=>`<option value="${c}">${esc(dName(c))}</option>`).join("")};
@@ -553,9 +561,8 @@ function renderQualList(){
   const host=$("#qList"); if(!host) return;
   const rows=[...store.qualitative.entries()].filter(([,r])=>allowed(r.affected_district)).sort((a,b)=>(b[1]._savedAt||"").localeCompare(a[1]._savedAt||""));
   if(!rows.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No qualitative entries yet</b>Entries you submit above for your districts will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
-  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th>Date</th><th>Region</th><th>District</th><th>Organisation</th><th>ABC role</th><th>Crisis began</th><th>Status</th><th style="min-width:320px">Description</th><th></th></tr></thead><tbody>
-  ${rows.map(([id,r])=>`<tr><td style="white-space:nowrap">${esc(r.report_date||(r._savedAt||"").slice(0,10))}</td><td>${esc(rName(r.affected_region))}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.reporting_organisation)}</td><td>${esc(label(ABC_ROLE,r.abc_role))}</td><td style="white-space:nowrap">${esc(r.crisis_onset)}</td><td>${esc(label(EVENT,r.event_status))}</td><td style="white-space:pre-wrap">${esc(r.event_description)}</td>
-  <td style="white-space:nowrap"><button class="btn sm" type="button" data-qedit="${esc(id)}">Edit</button>${isSuper()?` <span data-qdelbox="${esc(id)}"><button class="btn sm ghost" type="button" data-qdel="${esc(id)}">Delete</button></span>`:""}</td></tr>`).join("")}</tbody></table></div>`;
+  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table class="qtable"><colgroup><col style="width:${isSuper()?128:64}px"><col style="width:90px"><col style="width:62px"><col style="width:76px"><col style="width:100px"><col style="width:78px"><col style="width:90px"><col style="width:76px"><col></colgroup><thead><tr><th></th><th>Date</th><th>Region</th><th>District</th><th>Organisation</th><th>ABC role</th><th>Crisis began</th><th>Status</th><th>Description</th></tr></thead><tbody>
+  ${rows.map(([id,r])=>`<tr><td style="white-space:nowrap"><button class="btn sm primary" type="button" data-qedit="${esc(id)}">Edit</button>${isSuper()?` <span data-qdelbox="${esc(id)}"><button class="btn sm ghost" type="button" data-qdel="${esc(id)}">Delete</button></span>`:""}</td><td>${esc(r.report_date||(r._savedAt||"").slice(0,10))}</td><td>${esc(rName(r.affected_region))}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.reporting_organisation)}</td><td>${esc(label(ABC_ROLE,r.abc_role))}</td><td>${esc(r.crisis_onset)}</td><td>${esc(label(EVENT,r.event_status))}</td><td style="white-space:pre-wrap">${esc(r.event_description)}</td></tr>`).join("")}</tbody></table></div>`;
   host.querySelectorAll("[data-qedit]").forEach(b=>b.onclick=()=>loadQualIntoForm(b.dataset.qedit));
   host.querySelectorAll("[data-qdel]").forEach(b=>b.onclick=()=>{const box=host.querySelector(`[data-qdelbox="${CSS.escape(b.dataset.qdel)}"]`);box.innerHTML=`<span class="confirm">Delete? <button class="btn sm danger" type="button">Yes</button><button class="btn sm ghost" type="button">No</button></span>`;const [y,n]=box.querySelectorAll("button");y.onclick=async()=>{try{await deleteDoc("qualitative",b.dataset.qdel);toast("Entry deleted");renderQualList()}catch(e){toast("Couldn't delete: "+(e.message||e.code))}};n.onclick=renderQualList;});
 }
@@ -615,8 +622,8 @@ function renderRespList(){
     .sort((a,b)=>(b[1]._savedAt||"").localeCompare(a[1]._savedAt||""));
   if(!recs.length){ host.innerHTML=`<div class="tbl-wrap"><div class="empty"><b>No submissions yet</b>Rows submitted from the table above will be listed here${store.mode==="loading"?" (loading…)":""}.</div></div>`; return; }
   const when=t=>{if(!t)return"";const d=new Date(t);return isNaN(d)?t:d.toLocaleString("en-GB",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})};
-  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th class="stick">Organisation</th><th>District</th><th>Village / settlement</th><th>Update date</th><th>Status</th><th class="num">TOTAL people</th>${RESP_IND.map(i=>`<th class="num" title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}<th>Other</th><th class="num">Other people</th><th>Start</th><th>Completion</th><th>Note</th><th>Submitted</th>${isSuper()?"<th></th>":""}</tr></thead><tbody>
-  ${recs.map(([id,r])=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.report_date)}</td><td>${esc(label(RESP_STATUS,r.response_status))}</td><td class="num">${fmt(num(r.TOTAL_Number_of_People))}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}<td>${esc(r._Response_Type_Other)}</td><td class="num">${fmt(num(r.Response_Type_Other_People_Reached))}</td><td>${esc(r.actual_start)}</td><td>${esc(r.actual_completion)}</td><td>${esc(r.remarks)}</td><td style="white-space:nowrap">${esc(when(r._savedAt))}</td>${isSuper()?`
+  host.innerHTML=`<div class="tbl-wrap" style="max-height:none"><table><thead><tr><th class="stick">Organisation</th><th>District</th><th>Village / settlement</th><th>Update date</th><th>Status</th><th class="num">TOTAL people</th>${RESP_IND.map(i=>`<th class="num" title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}<th>Other</th><th class="num">Other people</th><th>Start</th><th>Completion</th><th>Submitted</th>${isSuper()?"<th></th>":""}</tr></thead><tbody>
+  ${recs.map(([id,r])=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td><td>${esc(r.report_date)}</td><td>${esc(label(RESP_STATUS,r.response_status))}</td><td class="num">${fmt(num(r.TOTAL_Number_of_People))}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}<td>${esc(r._Response_Type_Other)}</td><td class="num">${fmt(num(r.Response_Type_Other_People_Reached))}</td><td>${esc(r.actual_start)}</td><td>${esc(r.actual_completion)}</td><td style="white-space:nowrap">${esc(when(r._savedAt))}</td>${isSuper()?`
   <td style="white-space:nowrap"><button class="btn sm" type="button" data-redit="${esc(id)}">Edit</button> <span data-rdelbox="${esc(id)}"><button class="btn sm ghost" type="button" data-rdel="${esc(id)}">Delete</button></span></td>`:""}</tr>`).join("")}</tbody></table></div>`;
   host.querySelectorAll("[data-redit]").forEach(b=>b.onclick=()=>{
     const r=store.response.get(b.dataset.redit); if(!r) return;
@@ -913,8 +920,8 @@ function drawResponse(){
     const rows=[...recs].sort((a,b)=>(a.Reporting_Organisation_Name||"").localeCompare(b.Reporting_Organisation_Name||"")||dName(a.affected_district).localeCompare(dName(b.affected_district))||(a.affected_settlement||"").localeCompare(b.affected_settlement||""));
     const tot={}; RESP_IND.forEach(([k])=>tot[k]=rows.reduce((s,r)=>s+num(r[k]),0));
     body.innerHTML=`<div class="view-title">Organization Village Settlement Entries</div><div class="meta">${rows.length} entr${rows.length>1?"ies":"y"} from ${new Set(rows.map(r=>r.Reporting_Organisation_Name)).size} organisation(s)</div>
-    <div class="tbl-wrap"><table>${head(`<th class="stick">Organisation</th><th>District</th><th>Village settlement</th>`)}
-    <tbody>${rows.map(r=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td>${esc(r.affected_settlement)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}</tr>`).join("")}</tbody>
+    <div class="tbl-wrap"><table>${head(`<th class="stick">Organisation</th><th>District</th><th class="vcol">Village settlement</th>`)}
+    <tbody>${rows.map(r=>`<tr><td class="stick">${esc(r.Reporting_Organisation_Name)}</td><td>${esc(dName(r.affected_district))}</td><td class="vcol">${esc(r.affected_settlement)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(num(r[k]))}</td>`).join("")}</tr>`).join("")}</tbody>
     <tfoot><tr><td class="stick">Total</td><td></td><td></td>${RESP_IND.map(([k])=>`<td class="num">${fmt(tot[k])}</td>`).join("")}</tr></tfoot></table></div>`;
     return;
   }
@@ -926,14 +933,14 @@ function drawResponse(){
   const rows=[...groups.values()].sort((a,b)=>dName(a.district).localeCompare(dName(b.district))||a.loc.localeCompare(b.loc));
   if(st.view==="partners"){
     body.innerHTML=`<div class="view-title">Partner Mapping</div><div class="meta">Organisations reporting people reached, by service and village</div>
-    <div class="tbl-wrap"><table><thead><tr><th class="stick">District</th><th>Village settlement</th>${RESP_IND.map(i=>`<th title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="orgs">${r.o[k]?esc([...r.o[k]].sort().join(", ")):""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    <div class="tbl-wrap"><table><thead><tr><th class="stick">District</th><th class="vcol">Village settlement</th>${RESP_IND.map(i=>`<th title="${esc(i[2])}">${esc(i[1])}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td class="vcol">${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="orgs">${r.o[k]?esc([...r.o[k]].sort().join(", ")):""}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     return;
   }
   const tot={}; RESP_IND.forEach(([k])=>tot[k]=rows.reduce((s,r)=>s+r.v[k],0));
   body.innerHTML=`<div class="view-title">Village Settlement Summary</div><div class="meta">${rows.length} village${rows.length>1?"s":""} with a response · ${recs.length} response entr${recs.length===1?"y":"ies"}</div>
-  <div class="tbl-wrap"><table>${head(`<th class="stick">District</th><th>Village settlement</th>`)}
-  <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td>${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(r.v[k])}</td>`).join("")}</tr>`).join("")}</tbody>
+  <div class="tbl-wrap"><table>${head(`<th class="stick">District</th><th class="vcol">Village settlement</th>`)}
+  <tbody>${rows.map(r=>`<tr><td class="stick">${esc(dName(r.district))}</td><td class="vcol">${esc(r.loc)}${gap(r)}</td>${RESP_IND.map(([k])=>`<td class="num">${fmt(r.v[k])}</td>`).join("")}</tr>`).join("")}</tbody>
   <tfoot><tr><td class="stick">Total</td><td></td>${RESP_IND.map(([k])=>`<td class="num">${fmt(tot[k])}</td>`).join("")}</tr></tfoot></table></div>`;
 }
 
