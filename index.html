@@ -169,6 +169,8 @@ th.vcol,td.vcol{min-width:293px!important}
 table.implist th.setl,table.implist td.setl{min-width:296px}
 th.svill,td.svill{min-width:430px}
 table.psm td.orgs{min-width:150px;font-size:12.5px}
+.pdfbtn{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.pdfbtn:hover{filter:brightness(1.08);border-color:var(--bad)}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -195,6 +197,8 @@ td:nth-child(2){min-width:130px}
 <div id="toast" class="toast" hidden></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <script>
 const DATA = {"districts":[{"c":"baki","r":"awdal","n":"Baki"},{"c":"borama","r":"awdal","n":"Borama"},{"c":"lughaye","r":"awdal","n":"Lughaye"},{"c":"zeylac","r":"awdal","n":"Zeylac"},{"c":"ceel_barde","r":"bakool","n":"Ceel Barde"},{"c":"rab_dhuure","r":"bakool","n":"Rab Dhuure"},{"c":"tayeeglow","r":"bakool","n":"Tayeeglow"},{"c":"waajid","r":"bakool","n":"Waajid"},{"c":"xudur","r":"bakool","n":"Xudur"},{"c":"abdiaziz","r":"banadir","n":"Abdiaziz"},{"c":"bondhere","r":"banadir","n":"Bondhere"},{"c":"daynile","r":"banadir","n":"Daynile"},{"c":"dharkenley","r":"banadir","n":"Dharkenley"},{"c":"hamar_jajab","r":"banadir","n":"Hamar Jajab"},{"c":"hamar_weyne","r":"banadir","n":"Hamar Weyne"},{"c":"heliwaa","r":"banadir","n":"Heliwaa"},{"c":"hodan","r":"banadir","n":"Hodan"},{"c":"howlwadaag","r":"banadir","n":"Howlwadaag"},{"c":"karaan","r":"banadir","n":"Karaan"},{"c":"kaxda","r":"banadir","n":"Kaxda"},{"c":"shangani","r":"banadir","n":"Shangani"},{"c":"shibis","r":"banadir","n":"Shibis"},{"c":"waaberi","r":"banadir","n":"Waaberi"},{"c":"wadajir","r":"banadir","n":"Wadajir"},{"c":"warta_nabada","r":"banadir","n":"Warta Nabada"},{"c":"yaqshid","r":"banadir","n":"Yaqshid"},{"c":"bandarbeyla","r":"bari","n":"Bandarbeyla"},{"c":"bossaso","r":"bari","n":"Bossaso"},{"c":"caluula","r":"bari","n":"Caluula"},{"c":"iskushuban","r":"bari","n":"Iskushuban"},{"c":"qandala","r":"bari","n":"Qandala"},{"c":"qardho","r":"bari","n":"Qardho"},{"c":"baidoa","r":"bay","n":"Baidoa"},{"c":"buur_hakaba","r":"bay","n":"Buur Hakaba"},{"c":"diinsoor","r":"bay","n":"Diinsoor"},{"c":"qansax_dheere","r":"bay","n":"Qansax Dheere"},{"c":"cabudwaaq","r":"galgaduud","n":"Cabudwaaq"},{"c":"cadaado","r":"galgaduud","n":"Cadaado"},{"c":"ceel_buur","r":"galgaduud","n":"Ceel Buur"},{"c":"ceel_dheer","r":"galgaduud","n":"Ceel Dheer"},{"c":"dhuusamarreeb","r":"galgaduud","n":"Dhuusamarreeb"},{"c":"baardheere","r":"gedo","n":"Baardheere"},{"c":"belet_xaawo","r":"gedo","n":"Belet Xaawo"},{"c":"ceel_waaq","r":"gedo","n":"Ceel Waaq"},{"c":"doolow","r":"gedo","n":"Doolow"},{"c":"garbahaarey","r":"gedo","n":"Garbahaarey"},{"c":"luuq","r":"gedo","n":"Luuq"},{"c":"belet_weyne","r":"hiraan","n":"Belet Weyne"},{"c":"bulo_burto","r":"hiraan","n":"Bulo Burto"},{"c":"jalalaqsi","r":"hiraan","n":"Jalalaqsi"},{"c":"afmadow","r":"lower_juba","n":"Afmadow"},{"c":"badhaadhe","r":"lower_juba","n":"Badhaadhe"},{"c":"jamaame","r":"lower_juba","n":"Jamaame"},{"c":"kismaayo","r":"lower_juba","n":"Kismaayo"},{"c":"afgooye","r":"lower_shabelle","n":"Afgooye"},{"c":"baraawe","r":"lower_shabelle","n":"Baraawe"},{"c":"kurtunwaarey","r":"lower_shabelle","n":"Kurtunwaarey"},{"c":"marka","r":"lower_shabelle","n":"Marka"},{"c":"qoryooley","r":"lower_shabelle","n":"Qoryooley"},{"c":"sablaale","r":"lower_shabelle","n":"Sablaale"},{"c":"wanla_weyn","r":"lower_shabelle","n":"Wanla Weyn"},{"c":"buale","r":"middle_juba","n":"Bu'aale"},{"c":"jilib","r":"middle_juba","n":"Jilib"},{"c":"saakow","r":"middle_juba","n":"Saakow"},{"c":"adan_yabaal","r":"middle_shabelle","n":"Adan Yabaal"},{"c":"balcad","r":"middle_shabelle","n":"Balcad"},{"c":"cadale","r":"middle_shabelle","n":"Cadale"},{"c":"jowhar","r":"middle_shabelle","n":"Jowhar"},{"c":"gaalkacyo","r":"mudug","n":"Gaalkacyo"},{"c":"galdogob","r":"mudug","n":"Galdogob"},{"c":"hobyo","r":"mudug","n":"Hobyo"},{"c":"jariiban","r":"mudug","n":"Jariiban"},{"c":"xarardheere","r":"mudug","n":"Xarardheere"},{"c":"burtinle","r":"nugaal","n":"Burtinle"},{"c":"eyl","r":"nugaal","n":"Eyl"},{"c":"garowe","r":"nugaal","n":"Garowe"},{"c":"ceel_afweyn","r":"sanaag","n":"Ceel Afweyn"},{"c":"ceerigaabo","r":"sanaag","n":"Ceerigaabo"},{"c":"laasqoray","r":"sanaag","n":"Laasqoray"},{"c":"caynabo","r":"sool","n":"Caynabo"},{"c":"laas_caanood","r":"sool","n":"Laas Caanood"},{"c":"taleex","r":"sool","n":"Taleex"},{"c":"xudun","r":"sool","n":"Xudun"},{"c":"burao","r":"togdheer","n":"Burao"},{"c":"buuhoodle","r":"togdheer","n":"Buuhoodle"},{"c":"oodweyne","r":"togdheer","n":"Oodweyne"},{"c":"sheikh","r":"togdheer","n":"Sheikh"},{"c":"berbera","r":"woqooyi_galbeed","n":"Berbera"},{"c":"gebiley","r":"woqooyi_galbeed","n":"Gebiley"},{"c":"hargeysa","r":"woqooyi_galbeed","n":"Hargeysa"}]};
 const API_URL = String(window.FLOOD_API_URL||"").trim();
@@ -857,6 +861,7 @@ function renderDaily(kind){
      <button class="btn" type="button" id="yReset">Clear filters</button>
      ${kind==="qualitative"?"":`<div class="seg" role="group" aria-label="Report view"><button type="button" data-yv="detail" aria-pressed="${st.view!=="summary"}">All records</button><button type="button" data-yv="summary" aria-pressed="${st.view==="summary"}">Summary</button></div>`}
      <button class="btn primary" type="button" id="yExport" disabled>Export to Excel</button>
+     ${kind==="impact"&&isSuper()?`<button class="btn pdfbtn" type="button" id="yPdf" disabled>Export summary to PDF</button>`:""}
    </div>
    <div class="chiprow"><span class="chiplab">Month</span>${chip("m","","All months",!st.month)}${months.map(m=>chip("m",m,mLabel(m),st.month===m)).join("")}</div>
    <div class="chiprow"><span class="chiplab">Day</span>${chip("dd","","All days",!st.day)}${days.map(d=>chip("dd",d,String(Number(d)),st.day===d)).join("")}</div>
@@ -878,7 +883,7 @@ function renderDaily(kind){
   const totalRow=(cls,lab,rs)=> firstNum<0 ? `<tr class="${cls}"><td class="stick" colspan="${cols.length}">${esc(lab)}</td></tr>`
     : `<tr class="${cls}"><td class="stick" colspan="${firstNum}">${esc(lab)}</td>${cols.slice(firstNum).map(c=>c[2]==="n"?`<td class="num">${fmt(sum(rs,c[0]))}</td>`:"<td></td>").join("")}</tr>`;
   const sel=[st.region&&rName(st.region),st.district&&dName(st.district),st.month&&mLabel(st.month),st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
-  if(st.view==="summary" && kind!=="qualitative"){
+  if(kind!=="qualitative"){
     const numCols=cols.filter(c=>c[2]==="n");
     const setOf=(rs,k)=>new Set(rs.map(r=>String(r[k]||"").trim().toLowerCase()).filter(Boolean)).size;
     const head=["Region","District","Records","Settlements"].concat(kind==="response"?["Organisations"]:[]).concat(numCols.map(c=>c[1]));
@@ -887,6 +892,8 @@ function renderDaily(kind){
     const rowsS=order.map(d=>line(rName(DIST[d]?.r),dName(d),byD.get(d)));
     const tot=line("","Total ("+dists.length+" district"+(dists.length>1?"s":"")+")",recs);
     tot[3]=rowsS.reduce((a,r)=>a+r[3],0);
+    const pdfBtn=$("#yPdf"); if(pdfBtn){ pdfBtn.disabled=false; pdfBtn.onclick=()=>exportSummaryPdf(title,sel,head,rowsS,tot,recs.length,dists.length,fileKey,st); }
+    if(st.view==="summary"){
     const cell=(v,i)=>i<2?`<td class="${i===0?"stick":""}">${esc(v)}</td>`:`<td class="num">${fmt(v)||(v===0?"0":"")}</td>`;
     body.innerHTML=`<div class="view-title">Summary by district</div><div class="meta">${esc(sel)} · ${recs.length} ${recWord(kind)[recs.length>1?1:0]} in ${dists.length} district${dists.length>1?"s":""}</div>
     <div class="tbl-wrap"><table class="daily"><thead><tr>${head.map((h,i)=>`<th class="${i===0?"stick ":""}${i>=2?"num":""}">${esc(h)}</th>`).join("")}</tr></thead>
@@ -899,6 +906,7 @@ function renderDaily(kind){
       await exportXlsx(`El_Nino_${fileKey}_Summary${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.xlsx`, "Summary by district", [head,...rowsS,tot], about);
     };
     return;
+  }
   }
   body.innerHTML=`<div class="meta">${esc(sel)} · ${recs.length} ${recWord(kind)[recs.length>1?1:0]} in ${dists.length} district${dists.length>1?"s":""}</div>
   <div class="tbl-wrap"><table class="daily"><thead><tr>${cols.map((c,i)=>`<th class="${i===0?"stick ":""}${c[2]==="n"?"num":""}">${esc(c[1])}</th>`).join("")}</tr></thead>
@@ -916,6 +924,40 @@ function renderDaily(kind){
     const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
     await exportXlsx(`El_Nino_${fileKey}_Report${part?"_"+part:""}_${stamp}.xlsx`, sheetName, aoa, about);
   };
+}
+async function exportSummaryPdf(title,sel,head,rows,tot,nRec,nDist,fileKey,st){
+  const J=window.jspdf;
+  if(!J||!J.jsPDF){ toast("The PDF exporter didn't load. Check your connection and reload the page."); return; }
+  const doc=new J.jsPDF({orientation:"landscape",unit:"pt",format:"a4"});
+  if(typeof doc.autoTable!=="function"){ toast("The PDF table tool didn't load. Reload the page and try again."); return; }
+  const W=doc.internal.pageSize.getWidth(), M=28;
+  doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.setTextColor(179,54,44); doc.text("DRAFT",M,38);
+  doc.setTextColor(19,35,45); doc.text(" - El Niño - "+title+" - Summary by district",M+doc.getTextWidth("DRAFT"),38);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(86,105,116);
+  doc.text(`Filters: ${sel.replace(/·/g,"|")}   |   ${nRec} record${nRec===1?"":"s"} in ${nDist} district${nDist===1?"":"s"}   |   Exported ${new Date().toLocaleString("en-GB")}`,M,54);
+  doc.setTextColor(179,54,44); doc.setFontSize(7.5);
+  doc.text(doc.splitTextToSize("Disclaimer: The information presented is preliminary and remains subject to verification and updates as new information becomes available. For official datasets or validated figures, please contact the relevant ABC or OCHA office.",W-2*M),M,68);
+  const f=v=>typeof v==="number"? (Math.round(v*100)/100).toLocaleString("en-US") : String(v??"");
+  doc.autoTable({
+    head:[head], body:rows.map(r=>r.map(f)), foot:[tot.map(f)], startY:86, margin:{left:M,right:M,bottom:30}, theme:"grid", showFoot:"lastPage", showHead:"everyPage",
+    didParseCell:(d)=>{ if(d.column.index>=2) d.cell.styles.halign="right"; },
+    styles:{font:"helvetica",fontSize:7,cellPadding:3,lineColor:[207,216,220],lineWidth:0.4,textColor:[19,35,45],overflow:"linebreak"},
+    headStyles:{fillColor:[13,92,128],textColor:255,fontStyle:"bold",fontSize:6.5,halign:"center",valign:"middle"},
+    footStyles:{fillColor:[227,233,235],textColor:[19,35,45],fontStyle:"bold"},
+    alternateRowStyles:{fillColor:[245,248,249]},
+    columnStyles:Object.fromEntries(head.map((h,i)=>[i,i<2?{halign:"left",cellWidth:i===0?62:70}:{halign:"right"}])),
+    didDrawPage:()=>{ const H=doc.internal.pageSize.getHeight(); doc.setFontSize(7); doc.setTextColor(120);
+      doc.text("El Niño Flood Reporting - preliminary data",M,H-14); doc.text("Page "+doc.internal.getNumberOfPages(),W-M,H-14,{align:"right"}); }
+  });
+  const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
+  const filename=`El_Nino_${fileKey}_Summary${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.pdf`;
+  let dl=null; try{ dl=window.claude?.use? await window.claude.use("downloads") : null; }catch(e){ dl=null; }
+  if(dl){
+    try{ await dl.save({filename,data:doc.output("blob")}); toast("Exported "+filename); }
+    catch(e){ if(e?.code!=="declined") toast("Couldn't export: "+(e?.message||e?.code||e)); }
+    return;
+  }
+  try{ doc.save(filename); toast("Exported "+filename); }catch(e){ toast("Couldn't export: "+(e?.message||e)); }
 }
 async function exportXlsx(filename,sheetName,aoa,about){
   if(!window.XLSX){ toast("The Excel exporter didn't load. Check your connection and reload the page."); return; }
