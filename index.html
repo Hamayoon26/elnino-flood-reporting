@@ -892,19 +892,7 @@ function renderDaily(kind){
     const rowsS=order.map(d=>line(rName(DIST[d]?.r),dName(d),byD.get(d)));
     const tot=line("","Total ("+dists.length+" district"+(dists.length>1?"s":"")+")",recs);
     tot[3]=rowsS.reduce((a,r)=>a+r[3],0);
-    // impact: district rows grouped by region, each region followed by a subtotal row
-    const disp=[]; const subIdx=new Set();
-    if(kind==="impact"){
-      const regs=[...new Set(order.map(d=>DIST[d]?.r))];
-      regs.forEach(rg=>{
-        const ds=order.filter(d=>DIST[d]?.r===rg);
-        ds.forEach(d=>disp.push(rowsS[order.indexOf(d)]));
-        const rs=ds.flatMap(d=>byD.get(d));
-        const sub=line(rName(rg),"Subtotal - "+rName(rg)+" ("+ds.length+" district"+(ds.length>1?"s":"")+")",rs);
-        sub[3]=ds.reduce((a,d)=>a+rowsS[order.indexOf(d)][3],0);
-        subIdx.add(disp.length); disp.push(sub);
-      });
-    } else disp.push(...rowsS);
+    const disp=[...rowsS]; const subIdx=new Set();
     const pdfBtn=$("#yPdf"); if(pdfBtn){ pdfBtn.disabled=false; pdfBtn.onclick=()=>exportSummaryPdf(title,sel,head,disp,tot,recs.length,dists.length,fileKey,st,subIdx); }
     if(st.view==="summary"){
     const cell=(v,i)=>i<2?`<td class="${i===0?"stick":""}">${esc(v)}</td>`:`<td class="num">${fmt(v)||(v===0?"0":"")}</td>`;
