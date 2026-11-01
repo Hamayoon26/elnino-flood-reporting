@@ -762,7 +762,7 @@ const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}<
 
 /* ---------- 9. Partner Summary Mapping (district level) ---------- */
 const PSM={region:"",district:"",month:"",day:""};
-const SECTORS=[...new Set(RESP_IND.map(i=>i[3]))];
+const SECTORS=[...new Set(RESP_IND.map(i=>i[3]))].concat(["Other/Preparedness"]);
 function renderPartnerSummary(){
   const st=PSM; const regs=myRegions();
   $("#app").innerHTML=`<div class="wrap">
@@ -789,6 +789,7 @@ function renderPartnerSummary(){
     const d=r.affected_district; if(!byD.has(d)) byD.set(d,{all:new Set(),sec:{}});
     const g=byD.get(d); const org=(r.Reporting_Organisation_Name||"").trim(); if(!org) return;
     RESP_IND.forEach(([f,,,sec])=>{ if(num(r[f])>0){ (g.sec[sec]=g.sec[sec]||new Set()).add(org); g.all.add(org); } });
+    if(num(r.Response_Type_Other_People_Reached)>0||String(r._Response_Type_Other||"").trim()){ (g.sec["Other/Preparedness"]=g.sec["Other/Preparedness"]||new Set()).add(org); g.all.add(org); }
   });
   const dists=[...byD.keys()].sort((a,b)=>rName(DIST[a]?.r).localeCompare(rName(DIST[b]?.r))||dName(a).localeCompare(dName(b)));
   const list=set=>set&&set.size?[...set].sort((a,b)=>a.localeCompare(b)).join(", "):"";
@@ -805,7 +806,7 @@ function renderPartnerSummary(){
     const aoa=[["Region","District",...SECTORS,"Organisations"]];
     dists.forEach(d=>{const g=byD.get(d); aoa.push([rName(DIST[d]?.r),dName(d),...SECTORS.map(s=>list(g.sec[s])),g.all.size]);});
     aoa.push(["Total",dists.length+" districts",...SECTORS.map(s=>secCount(s)||""),allOrgs.size]);
-    const about=[["El Niño - Partner Summary Mapping by district"],["Filters",sel],["Districts",dists.length],["Organisations",allOrgs.size],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["An organisation is listed under a sector when it reported people reached for any indicator in that sector."],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
+    const about=[["El Niño - Partner Summary Mapping by district"],["Filters",sel],["Districts",dists.length],["Organisations",allOrgs.size],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["An organisation is listed under a sector when it reported people reached for any indicator in that sector. Other/Preparedness lists organisations that reported an 'Other' response type or people reached under it."],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
     const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
     await exportXlsx(`El_Nino_Partner_Summary_Mapping${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.xlsx`,"Partner summary",aoa,about);
   };
