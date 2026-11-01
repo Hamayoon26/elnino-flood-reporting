@@ -177,6 +177,8 @@ table.psm tbody tr:hover td.stick,table.psm tbody tr:hover td.stick2{background:
 table.psm tfoot td.stick,table.psm tfoot td.stick2{background:var(--sunk);z-index:2}
 .pdfbtn{background:var(--bad);border-color:var(--bad);color:var(--surface)}
 .pdfbtn:hover{filter:brightness(1.08);border-color:var(--bad)}
+.psmtabs{margin-bottom:12px}
+table.psmc td.num,table.psmc th.num{min-width:90px}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:var(--r);font-size:14px;z-index:50;max-width:calc(100% - 32px)}
 .confirm{display:inline-flex;gap:6px;align-items:center;font-size:13px}
@@ -767,13 +769,14 @@ const inFilter=(st,rec)=>allowed(rec.affected_district)&&(!st.month||recDay(rec)
 const emptyBox=(t,s)=>`<div class="tbl-wrap"><div class="empty"><b>${t}</b>${s}</div></div>`;
 
 /* ---------- 9. Partner Summary Mapping (district level) ---------- */
-const PSM={region:"",district:"",month:"",day:""};
+const PSM={region:"",district:"",month:"",day:"",view:"names"};
 const SECTORS=[...new Set(RESP_IND.map(i=>i[3]))].concat(["Other/Preparedness"]);
 function renderPartnerSummary(){
   const st=PSM; const regs=myRegions();
   $("#app").innerHTML=`<div class="wrap">
    <div class="dash-head"><div><div class="eyebrow">9 · Partner Summary Mapping</div><h1><span class="draft">DRAFT</span> - El Niño - Partner Summary Mapping</h1></div>
    <div class="disclaimer"><b>Disclaimer</b>: The information presented is preliminary and remains subject to verification and updates as new information becomes available. This dashboard is intended to facilitate access to and visualization of available information for ABCs and partners. For official datasets or validated figures, please contact the relevant ABC or OCHA office.</div></div>
+   <div class="seg psmtabs" role="group" aria-label="Partner summary view"><button type="button" data-pv="names" aria-pressed="${st.view!=="counts"}">Sector: name of organisation</button><button type="button" data-pv="counts" aria-pressed="${st.view==="counts"}">Sector: number of organisations</button></div>
    <div class="toolbar">
      <div class="f"><label for="pReg">Region</label><select id="pReg"><option value="">All</option>${regs.map(r=>`<option value="${r}" ${st.region===r?"selected":""}>${esc(rName(r))}</option>`).join("")}</select></div>
      <div class="f"><label for="pDist">District</label><select id="pDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
@@ -788,6 +791,7 @@ function renderPartnerSummary(){
   $("#pRefresh").onclick=()=>{Object.assign(st,{region:"",district:"",month:"",day:""});if(typeof loadData==="function")loadData();render();toast("Filters cleared · showing latest data")};
   document.querySelectorAll("[data-dm]").forEach(b=>b.onclick=()=>{st.month=b.dataset.dm;st.day="";render()});
   document.querySelectorAll("[data-dday]").forEach(b=>b.onclick=()=>{st.day=b.dataset.dday;render()});
+  document.querySelectorAll("[data-pv]").forEach(b=>b.onclick=()=>{st.view=b.dataset.pv;render()});
   const recs=[...store.response.values()].filter(r=>inFilter(st,r));
   const body=$("#pBody");
   if(!recs.length){ body.innerHTML=emptyBox("No response reports for this selection", store.mode==="loading"?"Loading data…":"Organisations appear here once responses are submitted for your districts."); $("#pExport").onclick=()=>toast("Nothing to export for this selection."); if($("#pPdf")) $("#pPdf").onclick=()=>toast("Nothing to export for this selection."); return; }
@@ -804,6 +808,30 @@ function renderPartnerSummary(){
   const secCount=sec=>new Set(dists.flatMap(d=>[...(byD.get(d).sec[sec]||[])])).size;
   const mL=st.month?(()=>{const [y,mm]=st.month.split("-");return `${MONTHS[Number(mm)-1]} ${y}`})():"";
   const sel=[st.region&&rName(st.region),st.district&&dName(st.district),mL,st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
+  if(st.view==="counts"){
+    const cnt=(g,s)=>g.sec[s]?g.sec[s].size:0;
+    const head=["Region","District",...SECTORS,"Organisations"];
+    const rowsC=dists.map(d=>{const g=byD.get(d);return [rName(DIST[d]?.r),dName(d),...SECTORS.map(s=>cnt(g,s)),g.all.size]});
+    const totC=["Total (unique)",dists.length+" district"+(dists.length>1?"s":""),...SECTORS.map(s=>secCount(s)),allOrgs.size];
+    const c=(v,i)=>i===0?`<td class="stick">${esc(v)}</td>`:i===1?`<td class="stick2">${esc(v)}</td>`:`<td class="num">${v?v:'<span class="zero">0</span>'}</td>`;
+    body.innerHTML=`<div class="view-title">Number of organisations by district and sector</div>
+    <div class="meta">${esc(sel)} · ${dists.length} district${dists.length>1?"s":""} · ${allOrgs.size} organisation${allOrgs.size===1?"":"s"} reporting people reached</div>
+    <div class="tbl-wrap"><table class="psm psmc"><thead><tr><th class="stick">Region</th><th class="stick2">District</th>${SECTORS.map(x=>`<th class="num">${esc(x)}</th>`).join("")}<th class="num">Organisations</th></tr></thead>
+    <tbody>${rowsC.map(r=>`<tr>${r.map(c).join("")}</tr>`).join("")}</tbody>
+    <tfoot><tr>${totC.map(c).join("")}</tr></tfoot></table></div>
+    <p class="note">Each cell counts the different organisations that reported people reached in that sector and district. The Total row counts each organisation once, even if it works in several districts.</p>`;
+    const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
+    if($("#pPdf")) $("#pPdf").onclick=()=>exportTablePdf("Number of organisations by district and sector",sel,`${dists.length} district${dists.length>1?"s":""} | ${allOrgs.size} organisation${allOrgs.size===1?"":"s"}`,
+      head,rowsC.map(r=>r.map(String)),totC.map(String),
+      `El_Nino_Partner_Summary_Counts${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.pdf`,
+      Object.fromEntries(head.map((h,i)=>[i,i<2?{halign:"left",cellWidth:i===0?70:80}:{halign:"right"}])),
+      "Each cell counts the different organisations that reported people reached in that sector and district.");
+    $("#pExport").onclick=async()=>{
+      const about=[["El Niño - Number of organisations by district and sector"],["Filters",sel],["Districts",dists.length],["Organisations",allOrgs.size],["Exported",new Date().toLocaleString("en-GB")],["Code",masked()],[],["Each cell counts the different organisations that reported people reached in that sector and district. The Total row counts each organisation once."],["Preliminary data, subject to verification. For official figures contact the relevant ABC or OCHA office."]];
+      await exportXlsx(`El_Nino_Partner_Summary_Counts${part?"_"+part:""}_${new Date().toISOString().slice(0,10)}.xlsx`,"Organisation counts",[head,...rowsC,totC],about);
+    };
+    return;
+  }
   body.innerHTML=`<div class="view-title">Partner Summary Mapping by district</div>
   <div class="meta">${esc(sel)} · ${dists.length} district${dists.length>1?"s":""} · ${allOrgs.size} organisation${allOrgs.size===1?"":"s"} reporting people reached</div>
   <div class="tbl-wrap"><table class="psm"><thead><tr><th class="stick">Region</th><th class="stick2">District</th>${SECTORS.map(s=>`<th>${esc(s)}</th>`).join("")}<th class="num">Organisations</th></tr></thead>
