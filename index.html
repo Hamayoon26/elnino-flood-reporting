@@ -169,6 +169,12 @@ th.vcol,td.vcol{min-width:293px!important}
 table.implist th.setl,table.implist td.setl{min-width:296px}
 th.svill,td.svill{min-width:430px}
 table.psm td.orgs{min-width:150px;font-size:12.5px}
+table.psm th.stick,table.psm td.stick{width:120px;min-width:120px;max-width:120px}
+table.psm th.stick2,table.psm td.stick2{position:sticky;left:120px;z-index:1;background:var(--surface);width:120px;min-width:120px!important;max-width:120px;box-shadow:inset -1px 0 0 var(--line)}
+table.psm thead th.stick2{z-index:3;background:var(--sunk)}
+table.psm tbody tr:nth-child(even) td.stick2{background:color-mix(in srgb,var(--sunk) 45%,var(--surface))}
+table.psm tbody tr:hover td.stick,table.psm tbody tr:hover td.stick2{background:var(--flood-soft)}
+table.psm tfoot td.stick,table.psm tfoot td.stick2{background:var(--sunk);z-index:2}
 .pdfbtn{background:var(--bad);border-color:var(--bad);color:var(--surface)}
 .pdfbtn:hover{filter:brightness(1.08);border-color:var(--bad)}
 .banner{font-size:13px;padding:8px 16px;background:var(--silt-soft);text-align:center}
@@ -773,6 +779,7 @@ function renderPartnerSummary(){
      <div class="f"><label for="pDist">District</label><select id="pDist"><option value="">All</option>${myDistricts(st.region).map(c=>`<option value="${c}" ${st.district===c?"selected":""}>${esc(dName(c))}</option>`).join("")}</select></div>
      <button class="btn" type="button" id="pRefresh" title="Clear filters and reload the latest data">Refresh</button>
      <button class="btn primary" type="button" id="pExport">Export to Excel</button>
+     ${isSuper()?`<button class="btn pdfbtn" type="button" id="pPdf">Export to PDF</button>`:""}
    </div>
    ${dateChips("response",st)}
    <div id="pBody"></div></div>`;
@@ -783,7 +790,7 @@ function renderPartnerSummary(){
   document.querySelectorAll("[data-dday]").forEach(b=>b.onclick=()=>{st.day=b.dataset.dday;render()});
   const recs=[...store.response.values()].filter(r=>inFilter(st,r));
   const body=$("#pBody");
-  if(!recs.length){ body.innerHTML=emptyBox("No response reports for this selection", store.mode==="loading"?"Loading data…":"Organisations appear here once responses are submitted for your districts."); $("#pExport").onclick=()=>toast("Nothing to export for this selection."); return; }
+  if(!recs.length){ body.innerHTML=emptyBox("No response reports for this selection", store.mode==="loading"?"Loading data…":"Organisations appear here once responses are submitted for your districts."); $("#pExport").onclick=()=>toast("Nothing to export for this selection."); if($("#pPdf")) $("#pPdf").onclick=()=>toast("Nothing to export for this selection."); return; }
   const byD=new Map();
   recs.forEach(r=>{
     const d=r.affected_district; if(!byD.has(d)) byD.set(d,{all:new Set(),sec:{}});
@@ -799,9 +806,16 @@ function renderPartnerSummary(){
   const sel=[st.region&&rName(st.region),st.district&&dName(st.district),mL,st.day&&("day "+Number(st.day))].filter(Boolean).join(" · ")||"All dates and locations";
   body.innerHTML=`<div class="view-title">Partner Summary Mapping by district</div>
   <div class="meta">${esc(sel)} · ${dists.length} district${dists.length>1?"s":""} · ${allOrgs.size} organisation${allOrgs.size===1?"":"s"} reporting people reached</div>
-  <div class="tbl-wrap"><table class="psm"><thead><tr><th class="stick">Region</th><th>District</th>${SECTORS.map(s=>`<th>${esc(s)}</th>`).join("")}<th class="num">Organisations</th></tr></thead>
-  <tbody>${dists.map(d=>{const g=byD.get(d);return `<tr><td class="stick">${esc(rName(DIST[d]?.r))}</td><td>${esc(dName(d))}</td>${SECTORS.map(s=>`<td class="orgs">${esc(list(g.sec[s]))}</td>`).join("")}<td class="num">${g.all.size}</td></tr>`}).join("")}</tbody>
-  <tfoot><tr><td class="stick">Total</td><td>${dists.length} district${dists.length>1?"s":""}</td>${SECTORS.map(s=>{const n=secCount(s);return `<td>${n?n+" organisation"+(n>1?"s":""):""}</td>`}).join("")}<td class="num">${allOrgs.size}</td></tr></tfoot></table></div>`;
+  <div class="tbl-wrap"><table class="psm"><thead><tr><th class="stick">Region</th><th class="stick2">District</th>${SECTORS.map(s=>`<th>${esc(s)}</th>`).join("")}<th class="num">Organisations</th></tr></thead>
+  <tbody>${dists.map(d=>{const g=byD.get(d);return `<tr><td class="stick">${esc(rName(DIST[d]?.r))}</td><td class="stick2">${esc(dName(d))}</td>${SECTORS.map(s=>`<td class="orgs">${esc(list(g.sec[s]))}</td>`).join("")}<td class="num">${g.all.size}</td></tr>`}).join("")}</tbody>
+  <tfoot><tr><td class="stick">Total</td><td class="stick2">${dists.length} district${dists.length>1?"s":""}</td>${SECTORS.map(s=>{const n=secCount(s);return `<td>${n?n+" organisation"+(n>1?"s":""):""}</td>`}).join("")}<td class="num">${allOrgs.size}</td></tr></tfoot></table></div>`;
+  if($("#pPdf")) $("#pPdf").onclick=()=>exportTablePdf("Partner Summary Mapping by district",sel,`${dists.length} district${dists.length>1?"s":""} | ${allOrgs.size} organisation${allOrgs.size===1?"":"s"}`,
+    ["Region","District",...SECTORS,"Orgs"],
+    dists.map(d=>{const g=byD.get(d);return [rName(DIST[d]?.r),dName(d),...SECTORS.map(s=>list(g.sec[s])),String(g.all.size)]}),
+    ["Total",dists.length+" districts",...SECTORS.map(s=>{const n=secCount(s);return n?String(n):""}),String(allOrgs.size)],
+    `El_Nino_Partner_Summary_Mapping${[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).map(x=>"_"+String(x).replace(/[^A-Za-z0-9_-]+/g,"-")).join("")}_${new Date().toISOString().slice(0,10)}.pdf`,
+    {0:{cellWidth:56},1:{cellWidth:62},[SECTORS.length+2]:{cellWidth:30,halign:"right"}},
+    "An organisation is listed under a sector when it reported people reached for any indicator in that sector.");
   $("#pExport").onclick=async()=>{
     const aoa=[["Region","District",...SECTORS,"Organisations"]];
     dists.forEach(d=>{const g=byD.get(d); aoa.push([rName(DIST[d]?.r),dName(d),...SECTORS.map(s=>list(g.sec[s])),g.all.size]);});
@@ -926,6 +940,37 @@ function renderDaily(kind){
     const part=[st.region&&rName(st.region),st.district&&dName(st.district),st.month,st.day&&("d"+st.day)].filter(Boolean).join("_").replace(/[^A-Za-z0-9_-]+/g,"-");
     await exportXlsx(`El_Nino_${fileKey}_Report${part?"_"+part:""}_${stamp}.xlsx`, sheetName, aoa, about);
   };
+}
+async function exportTablePdf(heading,sel,counts,head,rows,foot,filename,colStyles,note){
+  const J=window.jspdf;
+  if(!J||!J.jsPDF){ toast("The PDF exporter didn't load. Check your connection and reload the page."); return; }
+  const doc=new J.jsPDF({orientation:"landscape",unit:"pt",format:"a4"});
+  if(typeof doc.autoTable!=="function"){ toast("The PDF table tool didn't load. Reload the page and try again."); return; }
+  const W=doc.internal.pageSize.getWidth(), M=24;
+  doc.setFont("helvetica","bold"); doc.setFontSize(15); doc.setTextColor(179,54,44); doc.text("DRAFT",M,36);
+  doc.setTextColor(19,35,45); doc.text(" - El Niño - "+heading,M+doc.getTextWidth("DRAFT"),36);
+  doc.setFont("helvetica","normal"); doc.setFontSize(9); doc.setTextColor(86,105,116);
+  doc.text(`Filters: ${sel.replace(/·/g,"|")}   |   ${counts}   |   Exported ${new Date().toLocaleString("en-GB")}`,M,52);
+  doc.setTextColor(179,54,44); doc.setFontSize(7.5);
+  doc.text(doc.splitTextToSize("Disclaimer: The information presented is preliminary and remains subject to verification and updates as new information becomes available. For official datasets or validated figures, please contact the relevant ABC or OCHA office.",W-2*M),M,66);
+  let y=84; if(note){ doc.setTextColor(86,105,116); doc.text(note,M,y-2); y+=8; }
+  doc.autoTable({
+    head:[head], body:rows, foot:foot?[foot]:undefined, startY:y, margin:{left:M,right:M,bottom:30}, theme:"grid", showFoot:"lastPage", showHead:"everyPage",
+    styles:{font:"helvetica",fontSize:6.8,cellPadding:2.5,lineColor:[207,216,220],lineWidth:0.4,textColor:[19,35,45],overflow:"linebreak",valign:"top"},
+    headStyles:{fillColor:[13,92,128],textColor:255,fontStyle:"bold",fontSize:6.8,halign:"center",valign:"middle"},
+    footStyles:{fillColor:[227,233,235],textColor:[19,35,45],fontStyle:"bold"},
+    alternateRowStyles:{fillColor:[245,248,249]},
+    columnStyles:colStyles||{},
+    didDrawPage:()=>{ const H=doc.internal.pageSize.getHeight(); doc.setFontSize(7); doc.setTextColor(120);
+      doc.text("El Niño Flood Reporting - preliminary data",M,H-14); doc.text("Page "+doc.internal.getNumberOfPages(),W-M,H-14,{align:"right"}); }
+  });
+  let dl=null; try{ dl=window.claude?.use? await window.claude.use("downloads") : null; }catch(e){ dl=null; }
+  if(dl){
+    try{ await dl.save({filename,data:doc.output("blob")}); toast("Exported "+filename); }
+    catch(e){ if(e?.code!=="declined") toast("Couldn't export: "+(e?.message||e?.code||e)); }
+    return;
+  }
+  try{ doc.save(filename); toast("Exported "+filename); }catch(e){ toast("Couldn't export: "+(e?.message||e)); }
 }
 async function exportSummaryPdf(title,sel,head,rows,tot,nRec,nDist,fileKey,st,subIdx){
   const J=window.jspdf;
