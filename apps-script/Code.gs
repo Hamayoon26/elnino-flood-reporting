@@ -17,7 +17,7 @@ const IMPACT_FIELDS = ['id','_savedAt','_createdAt','_pin','reporting_organisati
   'health_facilities_affected','livestock_dead','access_status','reported_access_constraints','reported_access_note',
   'main_source','human_source_reference'];
 
-const RESP_IND = ['Food_rations','RUTF','F75','F100','RUSF','LNS_MQ','MPCA','Hygiene_kits','Aquatabs','HH_WT_Chlor_Floc',
+const RESP_IND = ['Food_rations','RUTF','F75','F100','RUSF','LNS_MQ','MPCA','Hygiene_kits','TruckingRehabWater','emergency_latrines',
   'Bulk_water_treatment','MedConsultation','Med_Refferals','MobileTeams','Essential_Medicines','GP_CaseManagement',
   'Child_Protection','GBV_related','NFI_kits','ShelterKits_PlasticSheet','ChildrenEducation'];
 
